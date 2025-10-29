@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Business Case Builder (7-Jahre)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS (xlsx.js) für Excel-Import -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        /* CSS-Stile wie zuvor, für Lesbarkeit und Design */
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        input[type="number"]::-webkit-inner-spin-button, 
+        input[type="number"]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type="number"] { -moz-appearance: textfield; }
+        .result-box { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06); }
+        .input-group label { transition: all 0.2s; }
+        .input-group:focus-within label { color: #1d4ed8; }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .pnl-data-row { 
+            display: grid;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .pnl-data-row > div { 
+            padding: 4px 8px; 
+            border-right: 1px solid #e5e7eb;
+            white-space: nowrap; /* Verhindert Zeilenumbruch */
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .pnl-data-row > div:last-child { border-right: none; }
+        .pnl-subtotal { background-color: #eff6ff; font-weight: bold; }
+        .pnl-final { background-color: #c7d2fe; font-weight: extrabold; }
+        .pnl-percent { background-color: #f3f4f6; color: #6b7280; font-size: 0.75rem; }
+        .kpi-row { background-color: #fcfcfc; border-bottom: 1px dashed #e5e7eb; }
+        .sticky-col { position: sticky; left: 0; z-index: 10; }
+        .sticky-header { position: sticky; top: 0; z-index: 20; }
+
+        /* Anpassungen für die Input-Matrix */
+        .kpi-input-row > div { 
+            padding: 4px;
+            border: 1px solid #d1d5db;
+        }
+        .kpi-input-row input {
+            padding: 2px;
+            border: none;
+            width: 100%;
+            text-align: right;
+            background-color: transparent;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-7xl mx-auto bg-white rounded-xl shadow-2xl p-6 md:p-10">
+        <header class="mb-8 flex justify-between items-start">
+            <div>
+                <h1 class="text-3xl md:text-4xl font-extrabold text-indigo-800 border-b-4 border-indigo-200 pb-2">
+                    Business Case Builder (7-Jahre)
+                </h1>
+                <p class="text-gray-500 mt-2">Modelliert P&L-Effekte von Projekten über einen flexiblen 7-Jahres-Horizont.</p>
+            </div>
+            
+            <!-- User Info und Status -->
+            <div class="text-right text-sm">
+                <p class="font-semibold text-gray-700">Status: <span id="authStatus" class="text-red-600">Konfiguration fehlt!</span></p>
+                <p class="text-xs text-gray-500 truncate">User ID: <span id="currentUserId">Bitte Firebase-Keys im Code ersetzen, um zu speichern.</span></p>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            
+            <!-- Linke Spalte: Eingaben & Steuerung -->
+            <div class="lg:col-span-1 space-y-8">
+
+                <!-- 0. PROJEKTLISTE IMPORTIEREN -->
+                <div class="p-4 bg-gray-100 rounded-lg shadow-inner border border-gray-300 space-y-4">
+                    <h2 class="text-xl font-bold text-indigo-700">0. Projektliste importieren</h2>
+                    <label for="excelFile" class="block text-sm font-medium text-gray-700">Wählen Sie Ihre Projektliste (.xlsx):</label>
+                    <input type="file" id="excelFile" accept=".xlsx, .xls" onchange="handleFileUpload(event)" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200">
+                    
+                    <div id="projectImportStatus" class="text-sm text-gray-600 mt-2">
+                        Warte auf Datei-Upload (0 Projekte geladen).
+                    </div>
+                </div>
+
+                <!-- 1. P&L STARTWERTE & ZEITACHSE -->
+                <div class="p-4 bg-indigo-50 rounded-lg shadow-inner space-y-4">
+                    <h2 class="text-xl font-bold text-indigo-700">1. Basis & Zeitachse (T=0)</h2>
+                    <div class="input-group">
+                        <label for="startYear" class="block text-sm font-medium text-gray-700">Start-Jahr (T=0)</label>
+                        <input type="number" id="startYear" value="2024" min="2000" max="2100" step="1" oninput="calculateCase()" class="mt-1 w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
+                    </div>
+                    <div class="input-group">
+                        <label for="pnl_kpi_vat_rate" class="block text-sm font-medium text-gray-700">Mehrwertsteuersatz (MwSt. %)</label>
+                        <input type="number" id="pnl_kpi_vat_rate" value="19.0" min="0" max="100" step="0.1" oninput="calculateCase()" class="mt-1 w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
+                    </div>
+                    <!-- Aggregierte Eingaben für T=0 (werden im Code aufgesplittet) -->
+                    <h3 class="text-md font-semibold text-indigo-700 mt-4">Basis-Kosten (Aggregiert)</h3>
+                    <div class="input-group">
+                        <label for="pnl_9_sales_cost" class="block text-sm font-medium text-gray-700">Direkte Kosten-Basis (€)</label>
+                        <input type="number" id="pnl_9_sales_cost" value="130000" min="0" step="1000" oninput="calculateCase()" class="mt-1 w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
+                        <p class="text-xs text-gray-500">Für Vertrieb, Personal, Sachkosten, etc. (T=0)</p>
+                    </div>
+                    <div class="input-group">
+                        <label for="pnl_14_marketing" class="block text-sm font-medium text-gray-700">Gemeinkosten-Basis (€)</label>
+                        <input type="number" id="pnl_14_marketing" value="200000" min="0" step="1000" oninput="calculateCase()" class="mt-1 w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
+                        <p class="text-xs text-gray-500">Für Vermarktung, IT, Produktion, etc. (T=0)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rechte Spalte: Detaillierte P&L Eingabe und Ergebnisse -->
+            <div class="lg:col-span-3 space-y-6">
+
+                <!-- 2. KPI-Steuerungs-Matrix (WIRKLOGIK) -->
+                <div class="p-6 bg-yellow-50 rounded-lg shadow-inner border border-yellow-300">
+                    <h2 class="text-2xl font-bold text-yellow-700 mb-4">2. KPI-Wirkung über die Jahre (T+1 bis T+7)</h2>
+                    <p class="text-sm text-gray-600 mb-4">Tragen Sie die kumulierten, jährlichen Effekte in Prozent oder Euro ein. (Derzeit globale Steuerung, wird später pro Projekt angewendet.)</p>
+                    
+                    <div class="overflow-x-auto">
+                        <div id="kpiInputGrid" class="min-w-max">
+                            <!-- Header -->
+                            <div class="grid font-bold text-xs text-gray-700 bg-yellow-200 border border-yellow-300">
+                                <div class="p-2 sticky-col" style="grid-column: 1 / 2; width: 200px;">Wirkung (KPI)</div>
+                                <!-- Jahre T+1 bis T+7 -->
+                                <div class="p-2 text-right" style="grid-column: 2 / 3;">T+1</div>
+                                <div class="p-2 text-right" style="grid-column: 3 / 4;">T+2</div>
+                                <div class="p-2 text-right" style="grid-column: 4 / 5;">T+3</div>
+                                <div class="p-2 text-right" style="grid-column: 5 / 6;">T+4</div>
+                                <div class="p-2 text-right" style="grid-column: 6 / 7;">T+5</div>
+                                <div class="p-2 text-right" style="grid-column: 7 / 8;">T+6</div>
+                                <div class="p-2 text-right" style="grid-column: 8 / 9;">T+7</div>
+                            </div>
+                            
+                            <!-- Eingabezeilen (werden in JS mit den passenden Grid-Spalten generiert) -->
+                            <!-- Beispiel-Zeile: Bestellwert-Boost -->
+                            <div class="kpi-input-row grid text-sm bg-white border border-yellow-300 mt-1" id="kpi-row-order-value">
+                                <div class="p-2 sticky-col font-medium text-gray-700" style="width: 200px;">Bestellwert-Boost (%)</div>
+                                <!-- Inputfelder für T+1 bis T+7 -->
+                                <!-- JS füllt die Input-Felder -->
+                            </div>
+                            <!-- Beispiel-Zeile: Retourensenkung -->
+                             <div class="kpi-input-row grid text-sm bg-white border border-yellow-300 mt-1" id="kpi-row-return-rate">
+                                <div class="p-2 sticky-col font-medium text-gray-700" style="width: 200px;">Retourenquote Senkung (p.p.)</div>
+                                <!-- JS füllt die Input-Felder -->
+                            </div>
+                            <!-- Beispiel-Zeile: Personal Kosten Senkung -->
+                            <div class="kpi-input-row grid text-sm bg-white border border-yellow-300 mt-1" id="kpi-row-personnel">
+                                <div class="p-2 sticky-col font-medium text-gray-700" style="width: 200px;">Personal-Kosten-Senkung (%)</div>
+                                <!-- JS füllt die Input-Felder -->
+                            </div>
+                             <!-- Beispiel-Zeile: Frachtkosten Senkung (Prozent des nominalen Preises) -->
+                            <div class="kpi-input-row grid text-sm bg-white border border-yellow-300 mt-1" id="kpi-row-freight">
+                                <div class="p-2 sticky-col font-medium text-gray-700" style="width: 200px;">Frachtkosten-Senkung (%)</div>
+                                <!-- JS füllt die Input-Felder -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-3 bg-white rounded-lg border border-indigo-200 shadow-md space-y-2 mt-4">
+                        <label for="scenarioSelector" class="block text-sm font-medium text-gray-700">Logistik-Szenario laden:</label>
+                        <div class="mt-1 flex space-space-x-2 items-center">
+                            <select id="scenarioSelector" onchange="loadScenarioData(this.value)" class="block w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
+                                <option value="">--- Kein Logistik-Szenario geladen ---</option>
+                            </select>
+                            <div id="scenarioSpinner" class="hidden spinner"></div>
+                        </div>
+                        <div id="scenarioStatus" class="text-xs text-gray-500">Logistik-KPIs für T+1 bis T+7 werden hieraus bezogen.</div>
+                    </div>
+                </div>
+
+                <!-- 3. P&L Ergebnis über 7 Jahre -->
+                <h2 class="text-2xl font-semibold text-gray-700 mt-8 border-b pb-2">3. P&L Ergebnis (T=0 bis T+7)</h2>
+                <div class="overflow-x-auto relative">
+                    <div id="pnlTable" class="min-w-max bg-white rounded-lg shadow-xl border border-gray-200">
+                        <!-- P&L Header (dynamisch in JS generiert) -->
+                        <div id="pnlTableHeader" class="grid sticky-header bg-gray-50 text-xs font-bold text-gray-700 border-b">
+                            <!-- JS füllt Header: Position + T=0, T+1, ... T+7 (jeweils € und %) -->
+                        </div>
+                        
+                        <!-- P&L Daten -->
+                        <div id="pnlTableBody" class="text-sm">
+                            <!-- P&L Zeilen werden hier dynamisch eingefügt -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. KPI Übersichtstabelle -->
+                <h2 class="text-2xl font-semibold text-gray-700 mt-12 border-b pb-2">4. KPI-Entwicklung (T=0 bis T+7)</h2>
+                <div class="overflow-x-auto relative mb-8">
+                    <div id="kpiTable" class="min-w-max bg-white rounded-lg shadow-xl border border-gray-200">
+                        <div id="kpiTableHeader" class="grid sticky-header bg-gray-50 text-xs font-bold text-gray-700 border-b">
+                            <!-- KPI Header -->
+                        </div>
+                        <div id="kpiTableBody" class="text-sm">
+                            <!-- KPI Zeilen -->
+                        </div>
+                    </div>
+                </div>
+                
+                <p class="text-sm text-gray-500 mt-4">Hinweis: Die Logistikkosten basieren in T+1 bis T+7 auf dem geladenen Szenario und den durch den Boost erhöhten Bestellwerten.</p>
+            </div>
+
+        </div>
+    </div>
+
+    <script type="module">
+        // Importiere Firebase Module
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, setPersistence, browserSessionPersistence, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, onSnapshot, collection, query, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Globale Variablen
+        let db;
+        let auth;
+        let userId = 'N/A';
+        let isAuthReady = false;
+        const SCENARIOS_COLLECTION_NAME = 'scenarios';
+        let loadedScenarioData = null; 
+        let importedProjects = []; 
+        const PLANNING_HORIZON = 7; // T+1 bis T+7
+
+        // Hilfsfunktionen zur Formatierung
+        const formatter = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        const percentFormatter = new Intl.NumberFormat('de-DE', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 });
+        const numberFormatter = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+        // =================================================================
+        // FIREBASE INITIALISIERUNG & AUTH
+        // =================================================================
+        async function initFirebase() {
+            try {
+                // 🛑 WICHTIG: BENUTZERDEFINIERTE FIREBASE KONFIGURATION 🛑
+                const firebaseConfig = {
+                    apiKey: "YOUR_API_KEY", // <-- 🔴 HIER EINFÜGEN
+                    authDomain: "YOUR_PROJECT_ID.firebaseapp.com", 
+                    projectId: "YOUR_PROJECT_ID", 
+                    storageBucket: "YOUR_PROJECT_ID.appspot.com",
+                    messagingSenderId: "YOUR_SENDER_ID",
+                    appId: "YOUR_APP_ID" 
+                };
+
+                if (firebaseConfig.apiKey === "YOUR_API_KEY") {
+                    document.getElementById('currentUserId').textContent = 'Bitte Firebase-Keys im Code ersetzen, um zu speichern.';
+                    document.getElementById('authStatus').textContent = 'Konfiguration fehlt!';
+                    document.getElementById('authStatus').classList.remove('text-yellow-600', 'text-green-600');
+                    document.getElementById('authStatus').classList.add('text-red-600');
+                    isAuthReady = false; 
+                    calculateCase();
+                    return; 
+                }
+
+                setLogLevel('debug');
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                document.getElementById('authStatus').textContent = 'Authentifiziere...';
+
+                await setPersistence(auth, browserSessionPersistence).catch(e => console.warn("Persistence konnte nicht gesetzt werden:", e));
+                await signInAnonymously(auth);
+
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        document.getElementById('currentUserId').textContent = userId;
+                        document.getElementById('authStatus').textContent = 'Verbunden';
+                        document.getElementById('authStatus').classList.remove('text-yellow-600', 'text-red-600');
+                        document.getElementById('authStatus').classList.add('text-green-600');
+                        loadScenariosListener();
+                    } else {
+                        document.getElementById('authStatus').textContent = 'Anmeldung fehlgeschlagen';
+                        document.getElementById('authStatus').classList.add('text-red-600');
+                    }
+                    isAuthReady = true; 
+                    calculateCase();
+                });
+
+            } catch (error) {
+                console.error("Kritischer Firebase-Fehler bei Initialisierung/Auth: ", error);
+                document.getElementById('authStatus').textContent = 'Fehler!';
+                document.getElementById('authStatus').classList.add('text-red-600');
+                document.getElementById('currentUserId').textContent = `Firebase: ${error.code || 'UNKNOWN'} - ${error.message.substring(0, 40)}...`; 
+                isAuthReady = false; 
+                calculateCase(); 
+            }
+        }
+        
+        // =================================================================
+        // P&L & KPI STRUKTUR UND DEFINITIONEN
+        // =================================================================
+        const PNL_STRUCTURE = [
+            { id: 'pnl_1_order_value', label: 'Bestellwert (Brutto)', type: 'nominal' },
+            { id: 'pnl_2_mwst', label: './. MwSt.', type: 'calculated', isCost: true, isMwst: true },
+            { id: 'pnl_3_revenue_fakturiert', label: '= Umsatz fakturiert (Netto)', type: 'calculated', isBold: true },
+            { id: 'pnl_4_other_rev', label: '+ Sonstige Erlöse', type: 'nominal' },
+            { id: 'pnl_5_cogs', label: './. Wareneinsatz', type: 'calculated', isCost: true },
+            { id: 'DB1', label: '= DB 1', type: 'subtotal', color: 'text-green-600' },
+            { id: 'HEADER_LOG', label: 'Abzgl. Logistik & Fracht', type: 'header' },
+            { id: 'pnl_6_log_cost', label: './. Logistikkosten (OPC, P&P, etc.)', type: 'calculated', isCost: true },
+            { id: 'pnl_7_shipping_out', label: './. Ausgangsfracht', type: 'calculated', isCost: true },
+            { id: 'pnl_8_shipping_return', label: './. Retourenfracht', type: 'calculated', isCost: true },
+            { id: 'DB2', label: '= DB 2', type: 'subtotal', color: 'text-green-700' },
+            { id: 'HEADER_DIRECT', label: 'Abzgl. Direkte Kosten', type: 'header' },
+            { id: 'pnl_9_sales_cost', label: './. Vertriebskosten', type: 'nominal', isCost: true },
+            { id: 'pnl_10_personnel_direct', label: './. Personalkosten (Dir.)', type: 'nominal', isCost: true },
+            { id: 'pnl_11_material_cost', label: './. Sachkosten', type: 'nominal', isCost: true },
+            { id: 'pnl_12_depreciation_direct', label: './. Abschreibungen (Dir.)', type: 'nominal', isCost: true },
+            { id: 'pnl_13_recharge_direct', label: './. Verrechnung (Dir.)', type: 'nominal', isCost: true },
+            { id: 'DB3', label: '= DB 3', type: 'subtotal', color: 'text-green-800' },
+            { id: 'HEADER_OVERHEAD', label: 'Abzgl. Gemeinkosten', type: 'header' },
+            { id: 'pnl_14_marketing', label: './. Zentrale Vermarktung', type: 'nominal', isCost: true },
+            { id: 'pnl_15_personnel_overhead', label: './. Personalkosten (Overhead)', type: 'nominal', isCost: true },
+            { id: 'pnl_16_depreciation_overhead', label: './. Abschreibungen (Overhead)', type: 'nominal', isCost: true },
+            { id: 'pnl_17_recharge_overhead', label: './. Verrechnung (Overhead)', type: 'nominal', isCost: true },
+            { id: 'pnl_18_production', label: './. Produktion', type: 'nominal', isCost: true },
+            { id: 'pnl_19_it_admin', label: './. IT/Admin', type: 'nominal', isCost: true },
+            { id: 'RESULT', label: '= Gesamtergebnis (EBIT)', type: 'final', color: 'text-purple-700' }
+        ];
+
+        const KPI_STRUCTURE = [
+            { id: 'orderValueBrutto', label: 'Bestellwert Brutto (€)' },
+            { id: 'avgVKBrutto', label: 'Durchschnitts-VK Brutto (€)' },
+            { id: 'itemsPerOrder', label: 'Artikel / Bestellung (IPO)' },
+            { id: 'ordersVolume', label: 'Zahl der Bestellungen (Anzahl)' },
+            { id: 'returnRate', label: 'Retourenquote (%)' },
+            { id: 'marketingKUR', label: 'Marketing-KUR (%)' },
+            { id: 'personnelRate', label: 'Personalkostenquote (%)' },
+            { id: 'wareneinsatzRate', label: 'Wareneinsatzquote (%)' }
+        ];
+
+        const KPI_INPUT_EFFECTS = [
+            { id: 'orderValueBoost', label: 'Bestellwert-Boost (c.p. %)', valueT1: 5.0 },
+            { id: 'returnRateReduction', label: 'Retourenquote Senkung (p.p.)', valueT1: 0.0 }, // p.p. = Prozentpunkte
+            { id: 'avgVKBoost', label: 'Durchschnitts-VK Boost (c.p. %)', valueT1: 0.0 },
+            { id: 'ipoBoost', label: 'Artikel/Bestellung Boost (c.p. %)', valueT1: 0.0 },
+            { id: 'freightCostReduction', label: 'Frachtkosten-Senkung (Nominal %)', valueT1: 0.0 },
+            { id: 'personnelCostReduction', label: 'Personal-Kosten-Senkung (%)', valueT1: 0.0 },
+            { id: 'marketingCostReduction', label: 'Marketingkosten-Senkung (%)', valueT1: 0.0 },
+            { id: 'rechargeCostReduction', label: 'Verrechnungskosten-Senkung (%)', valueT1: 0.0 }
+        ];
+
+        let KPI_EFFECTS_DATA = {}; // Speichert die Eingaben aus der KPI-Matrix
+
+        // =================================================================
+        // LOGISTIK BERECHNUNG (Controller Logik)
+        // =================================================================
+        function calculateDetailedLogistics(grossRevenueNet, logCosts, returnRate) {
+            const returnFactor = 1 - (returnRate / 100);
+            
+            // Logistik-Basis-KPIs
+            const netASP = logCosts.avgVKBrutto / (1 + logCosts.vatRate / 100);
+            const ipo = logCosts.ipo || 1; 
+            const ipr = logCosts.ipr || 1;
+
+            // Berechnung der Netto verkauften Artikel (aus Umsatz fakturiert)
+            const grossItemsSoldNet = grossRevenueNet / (netASP > 0 ? netASP : 1);
+            
+            // Berechnung der Brutto bestellten Artikel (die Logik leitet Brutto aus Netto ab)
+            const orderedItemsGross_corrected = returnFactor > 0 ? grossItemsSoldNet / returnFactor : 0; 
+
+            // Abgeleitete Metriken
+            const ordersVolume = orderedItemsGross_corrected / ipo;
+            const returnItems = orderedItemsGross_corrected - grossItemsSoldNet;
+            const returnShipments = returnItems / ipr; 
+
+            // 1. Logistikkosten (P&L 6)
+            const totalOrderProcessingCost = ordersVolume * logCosts.orderProcessingCostPerOrder;
+            const totalPickPackCost = orderedItemsGross_corrected * logCosts.pickPackCostPerItem;
+            const totalGoodsReceiptCost = orderedItemsGross_corrected * logCosts.goodsReceiptCostPerItem;
+            const totalReturnProcessingCost = returnItems * logCosts.returnProcessingCostPerItem;
+            const totalStorageCost = orderedItemsGross_corrected * logCosts.storageCostPerItemPerMonth * logCosts.avgStorageDurationMonths;
+
+            const Logistikkosten = 
+                totalOrderProcessingCost + 
+                totalPickPackCost + 
+                totalGoodsReceiptCost +
+                totalReturnProcessingCost +
+                totalStorageCost;
+            
+            // 2. Ausgangsfracht (P&L 7)
+            const Ausgangsfracht = ordersVolume * logCosts.shippingCostOut;
+
+            // 3. Retourenfracht (P&L 8)
+            const Retourenfracht = returnShipments * logCosts.shippingCostReturnShipment;
+
+            return { Logistikkosten, Ausgangsfracht, Retourenfracht, ordersVolume, orderedItemsGross_corrected, returnItems };
+        }
+
+        // =================================================================
+        // P&L BERECHNUNGSKERN
+        // =================================================================
+        function calculateSinglePnl(inputs, logCosts, currentKPIs) {
+            const PNL = {};
+            
+            // 1. INPUTS & VARS
+            const vatRate = inputs.pnl_kpi_vat_rate;
+            const vatFactor = 1 + vatRate / 100;
+            
+            // Aus aktuellen KPIs (können durch Projekte verändert sein)
+            const returnRate = currentKPIs.returnRate;
+            const cogsRate = currentKPIs.wareneinsatzRate;
+            
+            // 2. TOPLINE & DB1
+            PNL.pnl_1_order_value = currentKPIs.orderValueBrutto; // Bestellwert Brutto
+            
+            const netOrderValue = PNL.pnl_1_order_value / vatFactor; // Bestellwert Netto
+            
+            PNL.pnl_2_mwst = PNL.pnl_1_order_value - netOrderValue; // MwSt.
+            PNL.pnl_3_revenue_fakturiert = netOrderValue * (1 - returnRate / 100); // Umsatz fakturiert (Netto)
+            
+            PNL.pnl_4_other_rev = inputs.pnl_4_other_rev; // Sonstige Erlöse (Nominaler Input)
+            
+            PNL.pnl_5_cogs = PNL.pnl_3_revenue_fakturiert * (cogsRate / 100); // Wareneinsatz
+            
+            const GrossMargin = PNL.pnl_3_revenue_fakturiert + PNL.pnl_4_other_rev;
+            PNL.DB1 = GrossMargin - PNL.pnl_5_cogs;
+
+            // 3. LOGISTIK & DB2
+            const LogisticsResult = calculateDetailedLogistics(PNL.pnl_3_revenue_fakturiert, logCosts, returnRate);
+            
+            // Frachtkosten-Senkung anwenden (Direkter nominaler Effekt auf die Frachtkosten)
+            const freightReductionFactor = 1 - (currentKPIs.freightCostReduction / 100);
+
+            PNL.pnl_6_log_cost = LogisticsResult.Logistikkosten; // Logistikkosten (P&P, OPC etc.)
+            PNL.pnl_7_shipping_out = LogisticsResult.Ausgangsfracht * freightReductionFactor; // Ausgangsfracht (reduziert)
+            PNL.pnl_8_shipping_return = LogisticsResult.Retourenfracht * freightReductionFactor; // Retourenfracht (reduziert)
+            
+            const TotalLogistics = PNL.pnl_6_log_cost + PNL.pnl_7_shipping_out + PNL.pnl_8_shipping_return;
+            PNL.DB2 = PNL.DB1 - TotalLogistics;
+            
+            // 4. DIREKTE KOSTEN & DB3 (Pers. Dir. reduziert)
+            const personnelDirectReductionFactor = 1 - (currentKPIs.personnelCostReduction / 100);
+            const rechargeDirectReductionFactor = 1 - (currentKPIs.rechargeCostReduction / 100);
+
+            PNL.pnl_9_sales_cost = inputs.pnl_9_sales_cost;
+            PNL.pnl_10_personnel_direct = inputs.pnl_10_personnel_direct * personnelDirectReductionFactor; 
+            PNL.pnl_11_material_cost = inputs.pnl_11_material_cost; 
+            PNL.pnl_12_depreciation_direct = inputs.pnl_12_depreciation_direct; 
+            PNL.pnl_13_recharge_direct = inputs.pnl_13_recharge_direct * rechargeDirectReductionFactor; 
+            
+            const TotalDirectCost = PNL.pnl_9_sales_cost + PNL.pnl_10_personnel_direct + PNL.pnl_11_material_cost + PNL.pnl_12_depreciation_direct + PNL.pnl_13_recharge_direct;
+            PNL.DB3 = PNL.DB2 - TotalDirectCost;
+            
+            // 5. GEMEINKOSTEN & ERGEBNIS (Marketing, Pers. Over., Verrechnung Overhead reduziert)
+            const marketingReductionFactor = 1 - (currentKPIs.marketingCostReduction / 100);
+
+            // Annahme: Alle Personalkosten (Dir & Overhead) werden durch den gleichen Faktor reduziert
+            PNL.pnl_14_marketing = inputs.pnl_14_marketing * marketingReductionFactor;
+            PNL.pnl_15_personnel_overhead = inputs.pnl_15_personnel_overhead * personnelDirectReductionFactor; 
+            PNL.pnl_16_depreciation_overhead = inputs.pnl_16_depreciation_overhead;
+            PNL.pnl_17_recharge_overhead = inputs.pnl_17_recharge_overhead * rechargeDirectReductionFactor; 
+            PNL.pnl_18_production = inputs.pnl_18_production;
+            PNL.pnl_19_it_admin = inputs.pnl_19_it_admin;
+
+            const TotalOverhead = PNL.pnl_14_marketing + PNL.pnl_15_personnel_overhead + PNL.pnl_16_depreciation_overhead + PNL.pnl_17_recharge_overhead + PNL.pnl_18_production + PNL.pnl_19_it_admin;
+            PNL.RESULT = PNL.DB3 - TotalOverhead;
+
+            return { PNL, LogisticsResult };
+        }
+
+        function calculateCase() {
+            // --- 1. P&L INPUTS T=0 (Basis) ---
+            
+            // Hilfsfunktion für den fehlerfreien Zugriff auf Input-Werte
+            const getInputValue = (id) => {
+                const element = document.getElementById(id);
+                // Nutzt Optional Chaining (?.) um den Fehler "Cannot read properties of null" zu vermeiden.
+                return parseFloat(element?.value) || 0;
+            };
+
+            const inputsT0 = {
+                pnl_1_order_value: getInputValue('pnl_1_order_value'),
+                pnl_kpi_vat_rate: getInputValue('pnl_kpi_vat_rate'),
+                pnl_kpi_return_rate: getInputValue('pnl_kpi_return_rate'),
+                pnl_kpi_avg_vk: 65, // Basis VK Brutto (wird von Logik benötigt)
+                pnl_kpi_ipo: 1.2, // Basis IPO (wird von Logik benötigt)
+                pnl_4_other_rev: getInputValue('pnl_4_other_rev'),
+                pnl_kpi_cogs_rate: getInputValue('pnl_kpi_cogs_rate'),
+                
+                // Aggregierte Kosten (für die Demo aufgesplittet)
+                pnl_9_sales_cost: getInputValue('pnl_9_sales_cost') * 0.4, 
+                pnl_10_personnel_direct: getInputValue('pnl_9_sales_cost') * 0.3,
+                pnl_11_material_cost: getInputValue('pnl_9_sales_cost') * 0.1, 
+                pnl_12_depreciation_direct: getInputValue('pnl_9_sales_cost') * 0.1, 
+                pnl_13_recharge_direct: getInputValue('pnl_9_sales_cost') * 0.1, 
+
+                pnl_14_marketing: getInputValue('pnl_14_marketing') * 0.4, 
+                pnl_15_personnel_overhead: getInputValue('pnl_14_marketing') * 0.3, 
+                pnl_16_depreciation_overhead: getInputValue('pnl_14_marketing') * 0.1, 
+                pnl_17_recharge_overhead: getInputValue('pnl_14_marketing') * 0.1, 
+                pnl_18_production: getInputValue('pnl_14_marketing') * 0.05, 
+                pnl_19_it_admin: getInputValue('pnl_14_marketing') * 0.05,
+            };
+            
+            // --- 2. BASIS LOGISTIK KOSTEN (als Fallback, muss Logistik-KPIs beinhalten) ---
+            const baseLogisticsCosts = {
+                vatRate: inputsT0.pnl_kpi_vat_rate, 
+                avgVKBrutto: inputsT0.pnl_kpi_avg_vk, ipo: inputsT0.pnl_kpi_ipo, ipr: 1.2, 
+                shippingCostOut: 4.99, shippingCostReturnShipment: 5.99,
+                orderProcessingCostPerOrder: 1.50, pickPackCostPerItem: 1.10, goodsReceiptCostPerItem: 0.50,
+                returnProcessingCostPerItem: 2.50, storageCostPerItemPerMonth: 0.10, avgStorageDurationMonths: 3.0,
+            };
+            
+            // --- 3. KPI-EFFEKTE aus der Input-Matrix auslesen ---
+            KPI_INPUT_EFFECTS.forEach(effect => {
+                KPI_EFFECTS_DATA[effect.id] = {};
+                for (let t = 1; t <= PLANNING_HORIZON; t++) {
+                    // KPI-Eingabe aus dem HTML-Inputfeld
+                    const inputId = `${effect.id}_T${t}`;
+                    // Optional Chaining auch hier anwenden
+                    KPI_EFFECTS_DATA[effect.id][t] = parseFloat(document.getElementById(inputId)?.value) || 0;
+                }
+            });
+
+            // --- 4. AKTUELLE KPI-WERTE (werden über die Jahre akkumuliert/verändert) ---
+            let CURRENT_KPI_BASE = {
+                orderValueBrutto: inputsT0.pnl_1_order_value,
+                avgVKBrutto: inputsT0.pnl_kpi_avg_vk,
+                itemsPerOrder: inputsT0.pnl_kpi_ipo,
+                returnRate: inputsT0.pnl_kpi_return_rate,
+                wareneinsatzRate: inputsT0.pnl_kpi_cogs_rate,
+                
+                // Reduktions-Faktoren (Standard: 0% Reduktion)
+                freightCostReduction: 0, 
+                personnelCostReduction: 0,
+                marketingCostReduction: 0,
+                rechargeCostReduction: 0,
+            };
+            
+            // --- 5. 7-JAHRES BERECHNUNG ---
+            const PNL_YEARS = {}; // Speichert PNL für jedes Jahr (T0, T1, ..., T7)
+            const KPI_YEARS = {}; // Speichert KPIs für jedes Jahr
+
+            // T=0 ist die Basis
+            const T0_Result = calculateSinglePnl(inputsT0, baseLogisticsCosts, CURRENT_KPI_BASE);
+            PNL_YEARS[0] = T0_Result.PNL;
+            KPI_YEARS[0] = { 
+                ...CURRENT_KPI_BASE,
+                ordersVolume: T0_Result.LogisticsResult.ordersVolume,
+                returnRate: inputsT0.pnl_kpi_return_rate,
+                marketingKUR: (inputsT0.pnl_14_marketing * 0.4) / PNL_YEARS[0].pnl_3_revenue_fakturiert * 100, // Vereinfachte KUR
+                personnelRate: (inputsT0.pnl_10_personnel_direct + inputsT0.pnl_15_personnel_overhead) / PNL_YEARS[0].pnl_3_revenue_fakturiert * 100
+            };
+            
+            // T=1 bis T=7
+            let currentKPIs = { ...CURRENT_KPI_BASE };
+            let logisticsCostsT = { ...baseLogisticsCosts };
+
+            for (let t = 1; t <= PLANNING_HORIZON; t++) {
+                
+                // 5.1. AKKUMULATION DER KPI-EFFEKTE (Jährlicher Boost/Reduktion auf Basis des Vorjahres)
+                
+                // **Wirkung 1: Bestellwert-Boost**
+                const orderValueBoostPct = KPI_EFFECTS_DATA.orderValueBoost[t] / 100;
+                currentKPIs.orderValueBrutto = currentKPIs.orderValueBrutto * (1 + orderValueBoostPct);
+
+                // **Wirkung 5 & 6: Durchschnitts-VK / IPO Boost** (Verändern die Logistik-Basis)
+                const avgVKBoostPct = KPI_EFFECTS_DATA.avgVKBoost[t] / 100;
+                const ipoBoostPct = KPI_EFFECTS_DATA.ipoBoost[t] / 100;
+
+                currentKPIs.avgVKBrutto = currentKPIs.avgVKBrutto * (1 + avgVKBoostPct);
+                currentKPIs.itemsPerOrder = currentKPIs.itemsPerOrder * (1 + ipoBoostPct);
+                
+                // **Wirkung 2: Retourenquote Senkung** (Wird von p.p. [Prozentpunkte] abgezogen)
+                const returnRateReductionPP = KPI_EFFECTS_DATA.returnRateReduction[t];
+                currentKPIs.returnRate = Math.max(0, currentKPIs.returnRate - returnRateReductionPP); // Kann nicht negativ sein
+
+                // **Wirkung 3, 4, 7, 8: Kosten-Reduktion** (Wird als prozentualer Reduktionsfaktor gespeichert)
+                currentKPIs.freightCostReduction = currentKPIs.freightCostReduction + KPI_EFFECTS_DATA.freightCostReduction[t];
+                currentKPIs.personnelCostReduction = currentKPIs.personnelCostReduction + KPI_EFFECTS_DATA.personnelCostReduction[t];
+                currentKPIs.marketingCostReduction = currentKPIs.marketingCostReduction + KPI_EFFECTS_DATA.marketingCostReduction[t];
+                currentKPIs.rechargeCostReduction = currentKPIs.rechargeCostReduction + KPI_EFFECTS_DATA.rechargeCostReduction[t];
+
+                // 5.2. Logistik-Szenario anwenden (falls geladen) - überschreibt nur die Logistik-Konditionen
+                if (loadedScenarioData) {
+                    logisticsCostsT.shippingCostOut = parseFloat(loadedScenarioData.shippingCostOut) || logisticsCostsT.shippingCostOut;
+                    logisticsCostsT.shippingCostReturnShipment = parseFloat(loadedScenarioData.shippingCostReturnShipment) || logisticsCostsT.shippingCostReturnShipment;
+                    logisticsCostsT.orderProcessingCostPerOrder = parseFloat(loadedScenarioData.orderProcessingCostPerOrder) || logisticsCostsT.orderProcessingCostPerOrder;
+                    logisticsCostsT.pickPackCostPerItem = parseFloat(loadedScenarioData.pickPackCostPerItem) || logisticsCostsT.pickPackCostPerItem;
+                    logisticsCostsT.goodsReceiptCostPerItem = parseFloat(loadedScenarioData.goodsReceiptCostPerItem) || logisticsCostsT.goodsReceiptCostPerItem;
+                    logisticsCostsT.returnProcessingCostPerItem = parseFloat(loadedScenarioData.returnProcessingCostPerItem) || logisticsCostsT.returnProcessingCostPerItem;
+                    logisticsCostsT.storageCostPerItemPerMonth = parseFloat(loadedScenarioData.storageCostPerItemPerMonth) || logisticsCostsT.storageCostPerItemPerMonth;
+                    logisticsCostsT.avgStorageDurationMonths = parseFloat(loadedScenarioData.avgStorageDurationMonths) || logisticsCostsT.avgStorageDurationMonths;
+                }
+                
+                // Die aktuellen KPIs werden in die Logistikkosten-Struktur für die Berechnung übernommen
+                logisticsCostsT.avgVKBrutto = currentKPIs.avgVKBrutto;
+                logisticsCostsT.ipo = currentKPIs.itemsPerOrder;
+
+                // 5.3. Endgültige PNL für das Jahr berechnen
+                const Year_T_Result = calculateSinglePnl(inputsT0, logisticsCostsT, currentKPIs);
+                PNL_YEARS[t] = Year_T_Result.PNL;
+                
+                // 5.4. KPI-Werte speichern
+                KPI_YEARS[t] = {
+                    ...currentKPIs,
+                    ordersVolume: Year_T_Result.LogisticsResult.ordersVolume,
+                    marketingKUR: PNL_YEARS[t].pnl_14_marketing / PNL_YEARS[t].pnl_3_revenue_fakturiert * 100, 
+                    personnelRate: (PNL_YEARS[t].pnl_10_personnel_direct + PNL_YEARS[t].pnl_15_personnel_overhead) / PNL_YEARS[t].pnl_3_revenue_fakturiert * 100,
+                    wareneinsatzRate: currentKPIs.wareneinsatzRate, // COGS-Rate wird hier als statischer Input betrachtet
+                };
+            }
+            
+            // --- 6. DOM AKTUALISIEREN ---
+            renderPnlTable(PNL_YEARS);
+            renderKpiTable(KPI_YEARS);
+        }
+
+        // =================================================================
+        // RENDERING DER KPI-INPUT-MATRIX
+        // =================================================================
+        function renderKpiInputMatrix() {
+            const gridContainer = document.getElementById('kpiInputGrid');
+            if (!gridContainer) return;
+
+            // Header-Grid-Cols setzen
+            const headerRow = gridContainer.querySelector('.grid.font-bold');
+            headerRow.style.gridTemplateColumns = `minmax(200px, 1fr) repeat(${PLANNING_HORIZON}, minmax(80px, 1fr))`;
+
+
+            KPI_INPUT_EFFECTS.forEach(effect => {
+                const row = document.getElementById(`kpi-row-${effect.id}`);
+                if (!row) return;
+
+                // Setzt die Spalten für das Grid: 1 feste Spalte (Label) + 7 variable Spalten (T+1 bis T+7)
+                row.style.gridTemplateColumns = `minmax(200px, 1fr) repeat(${PLANNING_HORIZON}, minmax(80px, 1fr))`;
+                
+                // Entferne alte Inputs, um Dopplungen beim Neurendern zu vermeiden
+                const existingInputs = row.querySelectorAll('div:not(:first-child)');
+                existingInputs.forEach(div => div.remove());
+
+                let inputHtml = '';
+                for (let t = 1; t <= PLANNING_HORIZON; t++) {
+                    const value = (t === 1 && effect.id === 'orderValueBoost') ? effect.valueT1 : 0.0;
+                    inputHtml += `<div class="text-right">
+                                    <input type="number" id="${effect.id}_T${t}" value="${value.toFixed(1)}" step="0.1" oninput="calculateCase()">
+                                  </div>`;
+                }
+                row.innerHTML += inputHtml;
+            });
+        }
+        
+        // =================================================================
+        // RENDERING DER P&L TABELLE
+        // =================================================================
+        function renderPnlTable(PNL_YEARS) {
+            const headerContainer = document.getElementById('pnlTableHeader');
+            const bodyContainer = document.getElementById('pnlTableBody');
+            const startYear = parseInt(document.getElementById('startYear').value) || new Date().getFullYear();
+            const numColumns = PLANNING_HORIZON * 2 + 2; // 1 Label + 8 Jahre * 2 Spalten (Euro + %)
+
+            // Grid-Columns für Header und Body setzen
+            const gridCols = `minmax(250px, 1fr) repeat(${numColumns - 1}, minmax(100px, auto))`;
+            headerContainer.style.gridTemplateColumns = gridCols;
+            bodyContainer.style.gridTemplateColumns = gridCols;
+
+            // 1. Header generieren
+            let headerHtml = `<div class="pnl-header-col font-extrabold text-left sticky-col bg-gray-200" style="width: 250px;">P&L Position</div>`;
+            
+            for (let t = 0; t <= PLANNING_HORIZON; t++) {
+                headerHtml += `<div class="text-right font-bold text-gray-800">${startYear + t} (€)</div>`;
+                headerHtml += `<div class="text-right font-normal text-gray-600 border-r-4 border-white">${startYear + t} (%)</div>`;
+            }
+            headerContainer.innerHTML = headerHtml;
+
+            // 2. Body generieren
+            let bodyHtml = '';
+            PNL_STRUCTURE.forEach(item => {
+                if (item.type === 'header') {
+                    bodyHtml += `<div class="col-span-${numColumns} text-sm font-bold text-gray-700 p-2 bg-gray-100 mt-2">${item.label}</div>`;
+                    return;
+                }
+
+                let rowHtml = `<div class="pnl-data-row ${item.type === 'subtotal' ? 'pnl-subtotal' : item.type === 'final' ? 'pnl-final' : ''} border-b border-gray-100">`;
+                
+                // Erste Spalte: Label
+                rowHtml += `<div class="sticky-col font-medium text-left ${item.type === 'subtotal' ? 'bg-blue-100' : item.type === 'final' ? 'bg-indigo-200' : 'bg-white'} ${item.type === 'nominal' || item.type === 'calculated' ? 'ml-2' : ''}" style="width: 250px;">${item.label}</div>`;
+
+                for (let t = 0; t <= PLANNING_HORIZON; t++) {
+                    const pnlYear = PNL_YEARS[t];
+                    const value = pnlYear[item.id] || 0;
+                    const baseRevenue = pnlYear.pnl_3_revenue_fakturiert || 1;
+                    
+                    let valueDisplay;
+                    let percentDisplay;
+                    let valueClass = '';
+
+                    valueDisplay = formatter.format(value);
+                    
+                    // Prozentuale Darstellung (Quote)
+                    if (item.id === 'pnl_1_order_value' || item.id === 'pnl_2_mwst') {
+                         percentDisplay = 'N/A';
+                    } else if (item.id === 'pnl_3_revenue_fakturiert' || item.id === 'pnl_4_other_rev') {
+                        // Umsatz / Sonstige Erlöse Quote (immer 100% oder Quote zur Gesamt-Topline)
+                         percentDisplay = percentFormatter.format(value / baseRevenue);
+                    } else {
+                        // Kosten und DBs
+                        percentDisplay = percentFormatter.format(value / baseRevenue);
+                    }
+                    
+                    // Farbgebung für Kosten und Ergebnisse
+                    if (item.type === 'final' || item.type === 'subtotal') {
+                        valueClass = 'font-extrabold text-indigo-800';
+                        if (t > 0 && value < PNL_YEARS[t-1][item.id]) valueClass = 'font-extrabold text-red-600';
+                        if (t > 0 && value > PNL_YEARS[t-1][item.id]) valueClass = 'font-extrabold text-green-600';
+                    } else if (item.isCost) {
+                        valueClass = value < PNL_YEARS[0][item.id] ? 'text-green-600' : value > PNL_YEARS[0][item.id] ? 'text-red-600' : 'text-gray-700';
+                    }
+
+                    rowHtml += `<div class="text-right ${valueClass}">${valueDisplay}</div>`;
+                    rowHtml += `<div class="text-right pnl-percent">${percentDisplay}</div>`;
+                }
+                rowHtml += `</div>`;
+                bodyHtml += rowHtml;
+            });
+            bodyContainer.innerHTML = bodyHtml;
+        }
+
+        // =================================================================
+        // RENDERING DER KPI TABELLE
+        // =================================================================
+        function renderKpiTable(KPI_YEARS) {
+            const headerContainer = document.getElementById('kpiTableHeader');
+            const bodyContainer = document.getElementById('kpiTableBody');
+            const startYear = parseInt(document.getElementById('startYear').value) || new Date().getFullYear();
+            const numColumns = PLANNING_HORIZON + 1; // T=0 bis T+7
+
+            // Grid-Columns für Header und Body setzen (1 Label + 8 Jahre)
+            const gridCols = `minmax(250px, 1fr) repeat(${numColumns}, minmax(100px, auto))`;
+            headerContainer.style.gridTemplateColumns = gridCols;
+            bodyContainer.style.gridTemplateColumns = gridCols;
+
+            // 1. Header generieren
+            let headerHtml = `<div class="sticky-col font-extrabold text-left bg-gray-200" style="width: 250px;">KPI</div>`;
+            for (let t = 0; t <= PLANNING_HORIZON; t++) {
+                headerHtml += `<div class="text-right font-bold text-gray-800">${startYear + t}</div>`;
+            }
+            headerContainer.innerHTML = headerHtml;
+
+            // 2. Body generieren
+            let bodyHtml = '';
+            KPI_STRUCTURE.forEach(item => {
+                let rowHtml = `<div class="pnl-data-row kpi-row">`;
+                
+                // Erste Spalte: Label
+                rowHtml += `<div class="sticky-col font-medium text-left bg-white" style="width: 250px;">${item.label}</div>`;
+
+                for (let t = 0; t <= PLANNING_HORIZON; t++) {
+                    const kpiYear = KPI_YEARS[t];
+                    const value = kpiYear[item.id] || 0;
+                    
+                    let valueDisplay;
+                    let valueClass = '';
+
+                    if (item.id === 'returnRate' || item.id === 'marketingKUR' || item.id === 'personnelRate' || item.id === 'wareneinsatzRate') {
+                        valueDisplay = `${value.toFixed(1)} %`;
+                    } else if (item.id === 'ordersVolume') {
+                        valueDisplay = numberFormatter.format(value);
+                    } else {
+                        valueDisplay = formatter.format(value);
+                    }
+                    
+                    // Farbgebung: Verbesserung (grün) oder Verschlechterung (rot) gegenüber T=0
+                    if (t > 0) {
+                         const t0Value = KPI_YEARS[0][item.id];
+                         if (item.id === 'returnRate' || item.id === 'marketingKUR' || item.id === 'personnelRate' || item.id === 'wareneinsatzRate') {
+                            // Je niedriger, desto besser (grün)
+                            valueClass = value < t0Value ? 'text-green-600 font-semibold' : value > t0Value ? 'text-red-600 font-semibold' : 'text-gray-700';
+                         } else {
+                            // Je höher, desto besser (grün)
+                            valueClass = value > t0Value ? 'text-green-600 font-semibold' : value < t0Value ? 'text-red-600 font-semibold' : 'text-gray-700';
+                         }
+                    }
+
+                    rowHtml += `<div class="text-right ${valueClass}">${valueDisplay}</div>`;
+                }
+                rowHtml += `</div>`;
+                bodyHtml += rowHtml;
+            });
+            bodyContainer.innerHTML = bodyHtml;
+        }
+
+        // =================================================================
+        // DATEI-UPLOAD LOGIK (Platzhalter)
+        // =================================================================
+        function handleFileUpload(event) {
+            if (!isAuthReady) {
+                 document.getElementById('projectImportStatus').innerHTML = '<span class="text-red-600">Fehler: Bitte stellen Sie zuerst die Firebase-Verbindung her (Keys ersetzen)!</span>';
+                 return;
+            }
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                
+                // Konvertiert das Sheet in ein Array von JSON-Objekten (Spaltenköpfe werden Keys)
+                const json = XLSX.utils.sheet_to_json(worksheet);
+                importedProjects = json;
+                
+                document.getElementById('projectImportStatus').innerHTML = `<span class="text-green-600">Erfolgreich geladen: ${importedProjects.length} Projekte.</span>`;
+                calculateCase();
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // =================================================================
+        // SZENARIO LADEN LOGIK (Platzhalter)
+        // =================================================================
+        function loadScenariosListener() {
+            if (!db) return;
+            const appId = 'default-app-id'; // Muss hier fest als Default gesetzt werden, da __app_id nicht verfügbar ist.
+            const scenariosQuery = query(collection(db, `artifacts/${appId}/public/data/${SCENARIOS_COLLECTION_NAME}`));
+            
+            onSnapshot(scenariosQuery, (snapshot) => {
+                const selector = document.getElementById('scenarioSelector');
+                const selectedValue = selector.value;
+                
+                selector.innerHTML = '<option value="">--- Kein Logistik-Szenario geladen ---</option>';
+
+                snapshot.docs.forEach(doc => {
+                    const data = doc.data();
+                    const option = document.createElement('option');
+                    option.value = doc.id;
+                    option.textContent = data.scenarioName || doc.id;
+                    if (doc.id === selectedValue) {
+                        option.selected = true;
+                    }
+                    selector.appendChild(option);
+                });
+                
+                if (selectedValue && selectedValue !== "") {
+                    // Muss in einer echten Anwendung getDoc verwenden, hier simulieren wir den Load
+                    // loadScenarioData(selectedValue); 
+                }
+            });
+        }
+
+        function loadScenarioData(docId) {
+            if (!db || !docId) {
+                loadedScenarioData = null;
+                document.getElementById('scenarioStatus').textContent = 'Kein Szenario geladen.';
+                calculateCase();
+                return;
+            }
+            
+            document.getElementById('scenarioSpinner').classList.remove('hidden');
+
+            // --- SIMULIERTE DATEN AUS FIREBASE ---
+            // Simuliere die Daten, die aus der Firestore-Datenbank geladen werden würden, 
+            // wenn der Doc-ID-Abruf erfolgreich wäre.
+            loadedScenarioData = {
+                // Beispielwerte aus dem Controller-Tool, die die Basis-Werte überschreiben:
+                scenarioName: docId,
+                returnRate: 15.0, // Retourenquote von 25% auf 15% gesenkt
+                avgVKBrutto: 70.0, // VK von 65€ auf 70€ erhöht
+                ipo: 1.3, // IPO von 1.2 auf 1.3 erhöht
+                ipr: 1.1,
+                shippingCostOut: 4.50,
+                shippingCostReturnShipment: 5.00,
+                orderProcessingCostPerOrder: 1.00,
+                pickPackCostPerItem: 0.90,
+                goodsReceiptCostPerItem: 0.40,
+                returnProcessingCostPerItem: 1.50,
+                storageCostPerItemPerMonth: 0.08,
+                avgStorageDurationMonths: 2.5,
+            };
+            
+            document.getElementById('scenarioStatus').textContent = `Szenario "${docId}" geladen. (Simuliert)`;
+            document.getElementById('scenarioSpinner').classList.add('hidden');
+            calculateCase();
+        }
+
+        window.onload = function() {
+            renderKpiInputMatrix(); // Zeichnet die KPI-Inputfelder
+            initFirebase();
+            calculateCase(); // Führt die Erstberechnung durch
+        }
+    </script>
+</body>
+</html>
