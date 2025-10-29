@@ -246,14 +246,15 @@
         async function initFirebase() {
             try {
                 // 🛑 WICHTIG: BENUTZERDEFINIERTE FIREBASE KONFIGURATION 🛑
-                const firebaseConfig = {
-                    apiKey: "YOUR_API_KEY", // <-- 🔴 HIER EINFÜGEN
-                    authDomain: "YOUR_PROJECT_ID.firebaseapp.com", 
-                    projectId: "YOUR_PROJECT_ID", 
-                    storageBucket: "YOUR_PROJECT_ID.appspot.com",
-                    messagingSenderId: "YOUR_SENDER_ID",
-                    appId: "YOUR_APP_ID" 
-                };
+              const firebaseConfig = {
+    apiKey: "AIzaSyDGzrNBazLFhxTI-O-xkdSUU-c4EIWHGF0",
+    authDomain: "business-case-kalkulator.firebaseapp.com",
+    projectId: "business-case-kalkulator",
+    storageBucket: "business-case-kalkulator.firebasestorage.app",
+    messagingSenderId: "439851647109",
+    appId: "1:439851647109:web:50faf47e5970ada8b4a9ec",
+    measurementId: "G-ZGEB3JMEVH"
+  };
 
                 if (firebaseConfig.apiKey === "YOUR_API_KEY") {
                     document.getElementById('currentUserId').textContent = 'Bitte Firebase-Keys im Code ersetzen, um zu speichern.';
