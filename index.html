@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Business Case Builder (7-Jahre)</title>
+    <title>Business Case Builder (5-Jahre)</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- SheetJS (xlsx.js) für Excel-Import -->
@@ -38,6 +38,23 @@
             display: grid;
         }
         
+        /* Definition der Spaltenbreiten (ANGEPASST FÜR 5 JAHRE) */
+        .grid-cols-pnl {
+            /* 1 fixe Spalte + 6 Jahre (T0-T5) * 2 Spalten (Euro + %) = 13 Spalten */
+            grid-template-columns: minmax(240px, 1fr) repeat(12, minmax(110px, 1fr));
+            min-width: 1600px; /* Reduziert von 1800px */
+        }
+        .grid-cols-kpi {
+            /* 1 fixe Spalte + 6 Jahre (T0-T5) * 1 Spalte (Wert) = 7 Spalten */
+            grid-template-columns: minmax(240px, 1fr) repeat(6, minmax(110px, 1fr));
+            min-width: 900px; /* Reduziert */
+        }
+        .grid-cols-kpi-input {
+             /* 1 fixe Spalte + 5 Jahre (T1-T5) * 1 Spalte (Wert) = 6 Spalten */
+            grid-template-columns: minmax(220px, 1fr) repeat(5, minmax(90px, 1fr));
+            min-width: 700px; /* Reduziert */
+        }
+
         /* Zellen-Stile */
         .grid-cell {
             padding: 6px 10px;
@@ -76,9 +93,9 @@
         
         .pnl-subtotal > div { background-color: #eff6ff; font-weight: 700; } /* Blau für DBs */
         .pnl-final > div { background-color: #e0e7ff; font-weight: 800; } /* Dunkleres Blau für Ergebnis */
-        .pnl-header-row > div { background-color: #e5e7eb; } /* Grau für Sektions-Header (z.B. Abzgl. Logistik) */
+        .pnl-header-row { background-color: #e5e7eb; grid-column: 1 / -1; font-weight: 700; } /* Grau für Sektions-Header */
         .pnl-percent { color: #6b7280; font-size: 0.75rem; } /* %-Werte */
-        .kpi-row > div { background-color: #fdfdff; }
+        .kpi-row { background-color: #fdfdff; }
         
         /* KPI Input Matrix Stile */
         .kpi-input-grid { display: grid; }
@@ -99,9 +116,9 @@
         <header class="mb-8 flex flex-col md:flex-row justify-between md:items-start">
             <div>
                 <h1 class="text-3xl md:text-4xl font-extrabold text-indigo-800 border-b-4 border-indigo-200 pb-2">
-                    Business Case Builder (7-Jahre)
+                    Business Case Builder (5-Jahre)
                 </h1>
-                <p class="text-gray-500 mt-2">Modelliert P&L-Effekte von Projekten über einen flexiblen 7-Jahres-Horizont.</p>
+                <p class="text-gray-500 mt-2">Modelliert P&L-Effekte von Projekten über einen flexiblen 5-Jahres-Horizont.</p>
             </div>
             
             <!-- User Info und Status -->
@@ -202,27 +219,25 @@
                     </div>
                 </div>
 
-                <!-- 3. P&L Ergebnis über 7 Jahre -->
-                <h2 class="text-2xl font-semibold text-gray-700 mt-8 border-b pb-2">3. P&L Ergebnis (T=0 bis T+7)</h2>
+                <!-- 3. P&L Ergebnis über 5 Jahre -->
+                <h2 class="text-2xl font-semibold text-gray-700 mt-8 border-b pb-2">3. P&L Ergebnis (T=0 bis T+5)</h2>
                 <div class="table-container">
-                    <div id="pnlTable" class="data-grid">
-                        <!-- P&L Header (dynamisch in JS generiert) -->
-                        <div id="pnlTableHeader"></div>
-                        <!-- P&L Daten -->
-                        <div id="pnlTableBody"></div>
+                    <!-- KORREKTUR: Header und Body werden jetzt von JS direkt hier eingefügt -->
+                    <div id="pnlTable" class="data-grid grid-cols-pnl">
+                        <!-- JS füllt diesen Container -->
                     </div>
                 </div>
 
                 <!-- 4. KPI Übersichtstabelle -->
-                <h2 class="text-2xl font-semibold text-gray-700 mt-12 border-b pb-2">4. KPI-Entwicklung (T=0 bis T+7)</h2>
+                <h2 class="text-2xl font-semibold text-gray-700 mt-12 border-b pb-2">4. KPI-Entwicklung (T=0 bis T+5)</h2>
                 <div class="table-container mb-8">
-                    <div id="kpiTable" class="data-grid">
-                        <div id="kpiTableHeader"></div>
-                        <div id="kpiTableBody"></div>
+                    <!-- KORREKTUR: Header und Body werden jetzt von JS direkt hier eingefügt -->
+                    <div id="kpiTable" class="data-grid grid-cols-kpi">
+                        <!-- JS füllt diesen Container -->
                     </div>
                 </div>
                 
-                <p class="text-sm text-gray-500 mt-4">Hinweis: Die Logistikkosten basieren in T+1 bis T+7 auf dem geladenen Szenario und den durch den Boost erhöhten Bestellwerten.</p>
+                <p class="text-sm text-gray-500 mt-4">Hinweis: Die Logistikkosten basieren in T+1 bis T+5 auf dem geladenen Szenario und den durch den Boost erhöhten Bestellwerten.</p>
             </div>
 
         </div>
@@ -246,7 +261,7 @@
 
         let loadedScenarioData = null; 
         let importedProjects = []; 
-        const PLANNING_HORIZON = 7; // T+1 bis T+7
+        const PLANNING_HORIZON = 5; // T+1 bis T+5 (REDUZIERT VON 7)
 
         // Hilfsfunktionen zur Formatierung
         const formatter = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -507,7 +522,7 @@
             for (let i = 0; i < importedProjects.length; i++) {
                 // Iteriere über alle möglichen Effekt-Typen (Bestellwert, Retoure, etc.)
                 KPI_INPUT_EFFECTS.forEach(effect => {
-                    // Iteriere über alle 7 Planungsjahre
+                    // Iteriere über alle 5 Planungsjahre
                     for (let t = 1; t <= PLANNING_HORIZON; t++) {
                         // Lese den Wert aus dem spezifischen Input-Feld des Projekts
                         const inputId = `project_${i}_${effect.id}_T${t}`;
@@ -523,7 +538,7 @@
 
 
         // =================================================================
-        // GESAMTBERECHNUNG (7 JAHRE)
+        // GESAMTBERECHNUNG (5 JAHRE)
         // =================================================================
         function calculateCase() {
             
@@ -577,8 +592,8 @@
                 rechargeCostReduction: 0,
             };
             
-            // --- 5. 7-JAHRES BERECHNUNG ---
-            const PNL_YEARS = {}; // Speichert PNL für jedes Jahr (T0, T1, ..., T7)
+            // --- 5. 5-JAHRES BERECHNUNG ---
+            const PNL_YEARS = {}; // Speichert PNL für jedes Jahr (T0, T1, ..., T5)
             const KPI_YEARS = {}; // Speichert KPIs für jedes Jahr
 
             // T=0 ist die Basis
@@ -592,7 +607,7 @@
                 personnelRate: (inputsT0.pnl_10_personnel_direct + inputsT0.pnl_15_personnel_overhead) / (PNL_YEARS[0].pnl_3_revenue_fakturiert || 1) * 100
             };
             
-            // T=1 bis T=7
+            // T=1 bis T=5
             let currentKPIs = { ...CURRENT_KPI_BASE };
             let logisticsCostsT = { ...baseLogisticsCosts };
 
@@ -688,8 +703,6 @@
                     <div class="grid-cell grid-header text-right">T+3</div>
                     <div class="grid-cell grid-header text-right">T+4</div>
                     <div class="grid-cell grid-header text-right">T+5</div>
-                    <div class="grid-cell grid-header text-right">T+6</div>
-                    <div class="grid-cell grid-header text-right">T+7</div>
                 `;
 
                 // Eingabezeilen für dieses Projekt
@@ -718,13 +731,7 @@
         // =================================================================
         function renderPnlTable(PNL_YEARS) {
             const pnlTable = document.getElementById('pnlTable');
-            const headerContainer = document.getElementById('pnlTableHeader');
-            const bodyContainer = document.getElementById('pnlTableBody');
             const startYear = getInputValue('startYear') || new Date().getFullYear();
-
-            // KORREKTUR: Grid-Definition im JS setzen
-            const gridCols = `minmax(240px, 1fr) repeat(16, minmax(110px, 1fr))`;
-            pnlTable.style.gridTemplateColumns = gridCols;
 
             // 1. Header generieren
             let headerHtml = `<div class="grid-cell grid-header grid-sticky-col">P&L Position</div>`;
@@ -732,16 +739,13 @@
                 headerHtml += `<div class="grid-cell grid-header text-right">${startYear + t} (€)</div>`;
                 headerHtml += `<div class="grid-cell grid-header text-right pnl-percent">${startYear + t} (%)</div>`;
             }
-            headerContainer.innerHTML = headerHtml;
-            // Setze die Span-Weite für den Header (1 Label + 16 Daten-Spalten)
-            headerContainer.style.gridColumn = "1 / span 17";
-
 
             // 2. Body generieren
             let bodyHtml = '';
             PNL_STRUCTURE.forEach(item => {
                 if (item.type === 'header') {
-                    bodyHtml += `<div class="grid-cell pnl-header-row" style="grid-column: 1 / span 17; font-weight: 700; background-color: #f3f4f6;">${item.label}</div>`;
+                    // Span über alle Spalten (1 Label + 6 Jahre * 2 Spalten = 13)
+                    bodyHtml += `<div class="grid-cell pnl-header-row" style="grid-column: 1 / span 13;">${item.label}</div>`;
                     return;
                 }
 
@@ -783,9 +787,9 @@
                     bodyHtml += `<div class="grid-cell text-right pnl-percent ${rowClass}">${percentDisplay}</div>`;
                 }
             });
-            bodyContainer.innerHTML = bodyHtml;
-            // Setze die Span-Weite für den Body
-            bodyContainer.style.gridColumn = "1 / span 17";
+            
+            // 3. HTML injizieren
+            pnlTable.innerHTML = headerHtml + bodyHtml;
         }
 
         // =================================================================
@@ -793,21 +797,13 @@
         // =================================================================
         function renderKpiTable(KPI_YEARS) {
             const kpiTable = document.getElementById('kpiTable');
-            const headerContainer = document.getElementById('kpiTableHeader');
-            const bodyContainer = document.getElementById('kpiTableBody');
             const startYear = getInputValue('startYear') || new Date().getFullYear();
-
-            // KORREKTUR: Grid-Definition im JS setzen
-            const gridCols = `minmax(240px, 1fr) repeat(8, minmax(110px, 1fr))`;
-            kpiTable.style.gridTemplateColumns = gridCols;
 
             // 1. Header generieren
             let headerHtml = `<div class="grid-cell grid-header grid-sticky-col">KPI</div>`;
             for (let t = 0; t <= PLANNING_HORIZON; t++) {
                 headerHtml += `<div class="grid-cell grid-header text-right">${startYear + t}</div>`;
             }
-            headerContainer.innerHTML = headerHtml;
-            headerContainer.style.gridColumn = "1 / span 9";
 
             // 2. Body generieren
             let bodyHtml = '';
@@ -844,8 +840,9 @@
                     bodyHtml += `<div class="grid-cell text-right kpi-row ${valueClass}">${valueDisplay}</div>`;
                 }
             });
-            bodyContainer.innerHTML = bodyHtml;
-            bodyContainer.style.gridColumn = "1 / span 9";
+            
+            // 3. HTML injizieren
+            kpiTable.innerHTML = headerHtml + bodyHtml;
         }
 
         // =================================================================
@@ -981,7 +978,7 @@
                     document.getElementById('scenarioStatus').textContent = `Logistik-Szenario "${loadedScenarioData.scenarioName}" geladen.`;
                     
                     // Wende die geladenen Logistik-Daten auf die T=0 Inputs an (falls gewünscht)
-                    // (Aktuell werden sie in calculateCase() für T+1 bis T+7 verwendet)
+                    // (Aktuell werden sie in calculateCase() für T+1 bis T+5 verwendet)
                     
                     calculateCase(); // Neuberechnung mit den Daten des Szenarios
                 } else {
