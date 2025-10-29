@@ -27,7 +27,6 @@
 
         /* Layout-Stile für P&L und KPI Tabellen (WICHTIG FÜR DAS LAYOUT) */
         
-        /* Container für die scrollbare Tabelle */
         .table-container {
             overflow-x: auto;
             border: 1px solid #e5e7eb;
@@ -35,26 +34,10 @@
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
         }
         
-        /* Das Grid, das die Tabelle hält */
         .data-grid {
             display: grid;
-            min-width: 1800px; /* Stellt sicher, dass das Grid breit genug ist */
         }
         
-        /* Definition der Spaltenbreiten (WICHTIG!) */
-        .grid-cols-pnl {
-            /* 1 fixe Spalte + 8 Jahre * 2 Spalten (Euro + %) */
-            grid-template-columns: minmax(240px, 1fr) repeat(16, minmax(110px, 1fr));
-        }
-        .grid-cols-kpi {
-            /* 1 fixe Spalte + 8 Jahre * 1 Spalte (Wert) */
-            grid-template-columns: minmax(240px, 1fr) repeat(8, minmax(110px, 1fr));
-        }
-        .grid-cols-kpi-input {
-             /* 1 fixe Spalte + 7 Jahre * 1 Spalte (Wert) */
-            grid-template-columns: minmax(220px, 1fr) repeat(7, minmax(90px, 1fr));
-        }
-
         /* Zellen-Stile */
         .grid-cell {
             padding: 6px 10px;
@@ -90,9 +73,6 @@
             z-index: 30; /* Muss über dem Header UND der Spalte sein */
             background-color: #f3f4f6;
         }
-
-        /* Zebra-Streifen und Hervorhebungen */
-        .data-grid > .grid-cell:nth-child(even) { /* Gilt für P&L-Body-Zellen */ }
         
         .pnl-subtotal > div { background-color: #eff6ff; font-weight: 700; } /* Blau für DBs */
         .pnl-final > div { background-color: #e0e7ff; font-weight: 800; } /* Dunkleres Blau für Ergebnis */
@@ -132,13 +112,13 @@
                 <!-- Speichern/Laden Sektion -->
                 <div class="mt-4 flex flex-col md:items-end space-y-2">
                     <div class="flex items-center space-x-2 w-full">
-                        <input type="text" id="scenarioNameInput" placeholder="Szenario-Name" class="w-full md:w-auto rounded-lg border-gray-300 shadow-sm p-2 border-2">
+                        <input type="text" id="scenarioNameInput" placeholder="Business Case Name" class="w-full md:w-auto rounded-lg border-gray-300 shadow-sm p-2 border-2">
                         <button id="saveScenarioBtn" class="bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:bg-indigo-700 transition-colors">
                             Speichern
                         </button>
                     </div>
                     <div class="flex items-center space-x-2 w-full">
-                         <select id="scenarioSelector" class="block w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
+                         <select id="scenarioSelector" onchange="loadScenarioData(this.value)" class="block w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
                             <option value="">--- Logistik-Szenario laden ---</option>
                         </select>
                         <div id="scenarioSpinner" class="hidden spinner"></div>
@@ -158,7 +138,7 @@
                 <div class="p-4 bg-gray-100 rounded-lg shadow-inner border border-gray-300 space-y-4">
                     <h2 class="text-xl font-bold text-indigo-700">0. Projektliste importieren</h2>
                     <label for="excelFile" class="block text-sm font-medium text-gray-700">Wählen Sie Ihre Projektliste (.xlsx):</label>
-                    <input type="file" id="excelFile" accept=".xlsx, .xls" onchange="handleFileUpload(event)" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200">
+                    <input type="file" id="excelFile" accept=".xlsx, .xls" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200">
                     
                     <div id="projectImportStatus" class="text-sm text-gray-600 mt-2">
                         Warte auf Datei-Upload (0 Projekte geladen).
@@ -208,30 +188,24 @@
             <!-- Rechte Spalte: Detaillierte P&L Eingabe und Ergebnisse -->
             <div class="lg:col-span-3 space-y-6">
 
-                <!-- 2. KPI-Steuerungs-Matrix (WIRKLOGIK) -->
+                <!-- 2. IMPORTIERTE PROJEKTE & WIRKLOGIK -->
                 <div class="p-6 bg-yellow-50 rounded-lg shadow-inner border border-yellow-300">
-                    <h2 class="text-2xl font-bold text-yellow-700 mb-4">2. KPI-Wirkung über die Jahre (T+1 bis T+7)</h2>
-                    <p class="text-sm text-gray-600 mb-4">Tragen Sie die kumulierten, jährlichen Effekte in Prozent oder Euro ein. (Derzeit globale Steuerung, wird später pro Projekt angewendet.)</p>
+                    <h2 class="text-2xl font-bold text-yellow-700 mb-4">2. Importierte Projekte & Wirklogik</h2>
+                    <p class="text-sm text-gray-600 mb-4">
+                        Projekte werden aus der Excel-Datei geladen. Tragen Sie hier die jährlichen Effekte für jedes Projekt ein.
+                        Die Gesamt-P&L aggregiert die Summe aller Projekteffekte.
+                    </p>
                     
-                    <div class="table-container kpi-input-grid grid-cols-kpi-input" id="kpiInputGrid">
-                        <!-- Header -->
-                        <div class="grid-cell grid-header grid-sticky-col">Wirkung (KPI)</div>
-                        <div class="grid-cell grid-header text-right">T+1</div>
-                        <div class="grid-cell grid-header text-right">T+2</div>
-                        <div class="grid-cell grid-header text-right">T+3</div>
-                        <div class="grid-cell grid-header text-right">T+4</div>
-                        <div class="grid-cell grid-header text-right">T+5</div>
-                        <div class="grid-cell grid-header text-right">T+6</div>
-                        <div class="grid-cell grid-header text-right">T+7</div>
-                        
-                        <!-- Eingabezeilen (werden in JS mit den passenden Grid-Spalten generiert) -->
+                    <!-- Container für die dynamisch generierten Projekt-Input-Matrizen -->
+                    <div id="projectEffectsContainer" class="space-y-6">
+                        <p class="text-gray-500">Bitte laden Sie eine Excel-Projektliste, um die Eingabefelder zu sehen.</p>
                     </div>
                 </div>
 
                 <!-- 3. P&L Ergebnis über 7 Jahre -->
                 <h2 class="text-2xl font-semibold text-gray-700 mt-8 border-b pb-2">3. P&L Ergebnis (T=0 bis T+7)</h2>
                 <div class="table-container">
-                    <div id="pnlTable" class="data-grid grid-cols-pnl">
+                    <div id="pnlTable" class="data-grid">
                         <!-- P&L Header (dynamisch in JS generiert) -->
                         <div id="pnlTableHeader"></div>
                         <!-- P&L Daten -->
@@ -242,7 +216,7 @@
                 <!-- 4. KPI Übersichtstabelle -->
                 <h2 class="text-2xl font-semibold text-gray-700 mt-12 border-b pb-2">4. KPI-Entwicklung (T=0 bis T+7)</h2>
                 <div class="table-container mb-8">
-                    <div id="kpiTable" class="data-grid grid-cols-kpi">
+                    <div id="kpiTable" class="data-grid">
                         <div id="kpiTableHeader"></div>
                         <div id="kpiTableBody"></div>
                     </div>
@@ -265,8 +239,11 @@
         let auth;
         let userId = 'N/A';
         let isAuthReady = false;
-        // WICHTIG: Korrekter, einfacher Kollektionsname für Ihr Projekt
-        const SCENARIOS_COLLECTION_NAME = 'scenarios'; 
+        
+        // GETRENNTE KOLLEKTIONEN
+        const LOGISTICS_SCENARIOS_COLLECTION = 'scenarios'; // Für E-Com Controller Tool (LESEN)
+        const BUSINESS_CASES_COLLECTION = 'business_cases'; // Für dieses Tool (SCHREIBEN)
+
         let loadedScenarioData = null; 
         let importedProjects = []; 
         const PLANNING_HORIZON = 7; // T+1 bis T+7
@@ -282,11 +259,9 @@
         
         /**
          * Hilfsfunktion für den fehlerfreien Zugriff auf Input-Werte.
-         * Definiert im globalen Geltungsbereich, um von allen Funktionen genutzt zu werden.
          */
         const getInputValue = (id) => {
             const element = document.getElementById(id);
-            // Nutzt Optional Chaining (?.) um den Fehler "Cannot read properties of null" zu vermeiden.
             return parseFloat(element?.value) || 0;
         };
         
@@ -388,7 +363,7 @@
         ];
 
         const KPI_INPUT_EFFECTS = [
-            { id: 'orderValueBoost', label: 'Bestellwert-Boost (c.p. %)', valueT1: 5.0 },
+            { id: 'orderValueBoost', label: 'Bestellwert-Boost (c.p. %)', valueT1: 0.0 }, // Standard 0, wird pro Projekt gesetzt
             { id: 'returnRateReduction', label: 'Retourenquote Senkung (p.p.)', valueT1: 0.0 }, // p.p. = Prozentpunkte
             { id: 'avgVKBoost', label: 'Durchschnitts-VK Boost (c.p. %)', valueT1: 0.0 },
             { id: 'ipoBoost', label: 'Artikel/Bestellung Boost (c.p. %)', valueT1: 0.0 },
@@ -397,8 +372,6 @@
             { id: 'marketingCostReduction', label: 'Marketingkosten-Senkung (%)', valueT1: 0.0 },
             { id: 'rechargeCostReduction', label: 'Verrechnungskosten-Senkung (%)', valueT1: 0.0 }
         ];
-
-        let KPI_EFFECTS_DATA = {}; // Speichert die Eingaben aus der KPI-Matrix
 
         // =================================================================
         // LOGISTIK BERECHNUNG (Controller Logik)
@@ -518,13 +491,43 @@
         }
 
         // =================================================================
+        // AGGREGATION DER PROJEKT-EFFEKTE (NEU)
+        // =================================================================
+        function aggregateProjectEffects() {
+            // Initialisiert ein leeres Objekt für die Summe der Effekte
+            const aggregatedEffects = {};
+            KPI_INPUT_EFFECTS.forEach(effect => {
+                aggregatedEffects[effect.id] = {};
+                for (let t = 1; t <= PLANNING_HORIZON; t++) {
+                    aggregatedEffects[effect.id][t] = 0; // Starte jedes Jahr bei 0
+                }
+            });
+
+            // Iteriere über alle importierten Projekte
+            for (let i = 0; i < importedProjects.length; i++) {
+                // Iteriere über alle möglichen Effekt-Typen (Bestellwert, Retoure, etc.)
+                KPI_INPUT_EFFECTS.forEach(effect => {
+                    // Iteriere über alle 7 Planungsjahre
+                    for (let t = 1; t <= PLANNING_HORIZON; t++) {
+                        // Lese den Wert aus dem spezifischen Input-Feld des Projekts
+                        const inputId = `project_${i}_${effect.id}_T${t}`;
+                        const projectEffectValue = getInputValue(inputId);
+                        
+                        // Addiere den Effekt des Projekts zur Gesamtsumme dieses Jahres
+                        aggregatedEffects[effect.id][t] += projectEffectValue;
+                    }
+                });
+            }
+            return aggregatedEffects;
+        }
+
+
+        // =================================================================
         // GESAMTBERECHNUNG (7 JAHRE)
         // =================================================================
         function calculateCase() {
             
             // --- 1. P&L INPUTS T=0 (Basis) ---
-            // getInputValue ist jetzt global verfügbar
-
             const inputsT0 = {
                 pnl_1_order_value: getInputValue('pnl_1_order_value'),
                 pnl_kpi_vat_rate: getInputValue('pnl_kpi_vat_rate'),
@@ -558,14 +561,8 @@
                 returnProcessingCostPerItem: 2.50, storageCostPerItemPerMonth: 0.10, avgStorageDurationMonths: 3.0,
             };
             
-            // --- 3. KPI-EFFEKTE aus der Input-Matrix auslesen ---
-            KPI_INPUT_EFFECTS.forEach(effect => {
-                KPI_EFFECTS_DATA[effect.id] = {};
-                for (let t = 1; t <= PLANNING_HORIZON; t++) {
-                    const inputId = `${effect.id}_T${t}`;
-                    KPI_EFFECTS_DATA[effect.id][t] = getInputValue(inputId);
-                }
-            });
+            // --- 3. AGGREGIERTE PROJEKT-EFFEKTE (NEU) ---
+            const aggregatedEffects = aggregateProjectEffects();
 
             // --- 4. AKTUELLE KPI-WERTE (Basis für T=0) ---
             let CURRENT_KPI_BASE = {
@@ -604,25 +601,25 @@
                 // 5.1. AKKUMULATION DER KPI-EFFEKTE (Jährlicher Boost/Reduktion auf Basis des Vorjahres)
                 
                 // **Wirkung 1: Bestellwert-Boost**
-                const orderValueBoostPct = KPI_EFFECTS_DATA.orderValueBoost[t] / 100;
+                const orderValueBoostPct = aggregatedEffects.orderValueBoost[t] / 100;
                 currentKPIs.orderValueBrutto = currentKPIs.orderValueBrutto * (1 + orderValueBoostPct);
 
                 // **Wirkung 5 & 6: Durchschnitts-VK / IPO Boost** (Verändern die Logistik-Basis)
-                const avgVKBoostPct = KPI_EFFECTS_DATA.avgVKBoost[t] / 100;
-                const ipoBoostPct = KPI_EFFECTS_DATA.ipoBoost[t] / 100;
+                const avgVKBoostPct = aggregatedEffects.avgVKBoost[t] / 100;
+                const ipoBoostPct = aggregatedEffects.ipoBoost[t] / 100;
 
                 currentKPIs.avgVKBrutto = currentKPIs.avgVKBrutto * (1 + avgVKBoostPct);
                 currentKPIs.itemsPerOrder = currentKPIs.itemsPerOrder * (1 + ipoBoostPct);
                 
                 // **Wirkung 2: Retourenquote Senkung** (Wird von p.p. [Prozentpunkte] abgezogen)
-                const returnRateReductionPP = KPI_EFFECTS_DATA.returnRateReduction[t];
+                const returnRateReductionPP = aggregatedEffects.returnRateReduction[t];
                 currentKPIs.returnRate = Math.max(0, currentKPIs.returnRate - returnRateReductionPP); // Kann nicht negativ sein
 
                 // **Wirkung 3, 4, 7, 8: Kosten-Reduktion** (Wird als prozentualer Reduktionsfaktor gespeichert)
-                currentKPIs.freightCostReduction = currentKPIs.freightCostReduction + KPI_EFFECTS_DATA.freightCostReduction[t];
-                currentKPIs.personnelCostReduction = currentKPIs.personnelCostReduction + KPI_EFFECTS_DATA.personnelCostReduction[t];
-                currentKPIs.marketingCostReduction = currentKPIs.marketingCostReduction + KPI_EFFECTS_DATA.marketingCostReduction[t];
-                currentKPIs.rechargeCostReduction = currentKPIs.rechargeCostReduction + KPI_EFFECTS_DATA.rechargeCostReduction[t];
+                currentKPIs.freightCostReduction = currentKPIs.freightCostReduction + aggregatedEffects.freightCostReduction[t];
+                currentKPIs.personnelCostReduction = currentKPIs.personnelCostReduction + aggregatedEffects.personnelCostReduction[t];
+                currentKPIs.marketingCostReduction = currentKPIs.marketingCostReduction + aggregatedEffects.marketingCostReduction[t];
+                currentKPIs.rechargeCostReduction = currentKPIs.rechargeCostReduction + aggregatedEffects.rechargeCostReduction[t];
 
                 // 5.2. Logistik-Szenario anwenden (falls geladen) - überschreibt nur die Logistik-Konditionen
                 if (loadedScenarioData) {
@@ -666,57 +663,84 @@
         }
 
         // =================================================================
-        // RENDERING DER KPI-INPUT-MATRIX
+        // RENDERING DER PROJEKT-INPUT-MATRIZEN (NEU)
         // =================================================================
-        function renderKpiInputMatrix() {
-            const gridContainer = document.getElementById('kpiInputGrid');
-            if (!gridContainer) return;
+        function renderProjectInputs(projects) {
+            const container = document.getElementById('projectEffectsContainer');
+            if (!container) return;
+            
+            container.innerHTML = ''; // Leere den Platzhalter
 
-            let html = `
-                <div class="grid-cell grid-header grid-sticky-col">Wirkung (KPI)</div>
-                <div class="grid-cell grid-header text-right">T+1</div>
-                <div class="grid-cell grid-header text-right">T+2</div>
-                <div class="grid-cell grid-header text-right">T+3</div>
-                <div class="grid-cell grid-header text-right">T+4</div>
-                <div class="grid-cell grid-header text-right">T+5</div>
-                <div class="grid-cell grid-header text-right">T+6</div>
-                <div class="grid-cell grid-header text-right">T+7</div>
-            `;
+            projects.forEach((project, index) => {
+                const projectName = project.Projektname || `Projekt ${index + 1}`; // Annahme: Spalte 'Projektname'
+                
+                let projectHtml = `
+                    <div class="p-4 bg-white rounded-lg shadow-md border border-gray-200">
+                        <h3 class="text-xl font-bold text-indigo-600 mb-3">${projectName}</h3>
+                        <div class="table-container kpi-input-grid grid-cols-kpi-input">
+                `;
 
-            KPI_INPUT_EFFECTS.forEach(effect => {
-                html += `<div class="grid-cell grid-sticky-col">${effect.label}</div>`;
-                for (let t = 1; t <= PLANNING_HORIZON; t++) {
-                    const value = (t === 1 && effect.id === 'orderValueBoost') ? effect.valueT1 : 0.0;
-                    html += `<div class="grid-cell">
-                                <input type="number" id="${effect.id}_T${t}" value="${value.toFixed(1)}" step="0.1" oninput="calculateCase()">
-                             </div>`;
-                }
+                // Header für diese Projekt-Matrix
+                projectHtml += `
+                    <div class="grid-cell grid-header grid-sticky-col">Wirkung (KPI)</div>
+                    <div class="grid-cell grid-header text-right">T+1</div>
+                    <div class="grid-cell grid-header text-right">T+2</div>
+                    <div class="grid-cell grid-header text-right">T+3</div>
+                    <div class="grid-cell grid-header text-right">T+4</div>
+                    <div class="grid-cell grid-header text-right">T+5</div>
+                    <div class="grid-cell grid-header text-right">T+6</div>
+                    <div class="grid-cell grid-header text-right">T+7</div>
+                `;
+
+                // Eingabezeilen für dieses Projekt
+                KPI_INPUT_EFFECTS.forEach(effect => {
+                    projectHtml += `<div class="grid-cell grid-sticky-col">${effect.label}</div>`;
+                    for (let t = 1; t <= PLANNING_HORIZON; t++) {
+                        // Eindeutige ID pro Projekt und Effekt: project_INDEX_EFFECTID_JAHR
+                        const inputId = `project_${index}_${effect.id}_T${t}`;
+                        // Lese den Wert aus der Excel-Datei (z.B. Spalte "orderValueBoost_T1")
+                        const excelKey = `${effect.id}_T${t}`;
+                        const value = project[excelKey] || 0.0; 
+
+                        projectHtml += `<div class="grid-cell">
+                                        <input type="number" id="${inputId}" value="${value.toFixed(1)}" step="0.1" oninput="calculateCase()">
+                                     </div>`;
+                    }
+                });
+                
+                projectHtml += `</div></div>`; // Ende der Projekt-Matrix
+                container.innerHTML += projectHtml;
             });
-            gridContainer.innerHTML = html;
         }
         
         // =================================================================
-        // RENDERING DER P&L TABELLE
+        // RENDERING DER P&L TABELLE (Layout korrigiert)
         // =================================================================
         function renderPnlTable(PNL_YEARS) {
+            const pnlTable = document.getElementById('pnlTable');
             const headerContainer = document.getElementById('pnlTableHeader');
             const bodyContainer = document.getElementById('pnlTableBody');
             const startYear = getInputValue('startYear') || new Date().getFullYear();
 
+            // KORREKTUR: Grid-Definition im JS setzen
+            const gridCols = `minmax(240px, 1fr) repeat(16, minmax(110px, 1fr))`;
+            pnlTable.style.gridTemplateColumns = gridCols;
+
             // 1. Header generieren
-            let headerHtml = `
-                <div class="grid-cell grid-header grid-sticky-col">P&L Position</div>`;
+            let headerHtml = `<div class="grid-cell grid-header grid-sticky-col">P&L Position</div>`;
             for (let t = 0; t <= PLANNING_HORIZON; t++) {
                 headerHtml += `<div class="grid-cell grid-header text-right">${startYear + t} (€)</div>`;
                 headerHtml += `<div class="grid-cell grid-header text-right pnl-percent">${startYear + t} (%)</div>`;
             }
             headerContainer.innerHTML = headerHtml;
+            // Setze die Span-Weite für den Header (1 Label + 16 Daten-Spalten)
+            headerContainer.style.gridColumn = "1 / span 17";
+
 
             // 2. Body generieren
             let bodyHtml = '';
             PNL_STRUCTURE.forEach(item => {
                 if (item.type === 'header') {
-                    // Span über alle Spalten (1 Label + 8 Jahre * 2 Spalten)
                     bodyHtml += `<div class="grid-cell pnl-header-row" style="grid-column: 1 / span 17; font-weight: 700; background-color: #f3f4f6;">${item.label}</div>`;
                     return;
                 }
@@ -737,7 +761,6 @@
 
                     valueDisplay = formatter.format(value);
                     
-                    // Prozentuale Darstellung (Quote)
                     if (item.id === 'pnl_1_order_value' || item.id === 'pnl_2_mwst') {
                          percentDisplay = 'N/A';
                     } else if (item.id === 'pnl_3_revenue_fakturiert') {
@@ -746,7 +769,6 @@
                         percentDisplay = percentFormatter.format(value / baseRevenue);
                     }
                     
-                    // Farbgebung für Kosten und Ergebnisse
                     if (item.type === 'final' || item.type === 'subtotal') {
                         valueClass = 'font-bold';
                         if (t > 0 && value < (PNL_YEARS[t-1]?.[item.id] || 0)) valueClass += ' text-red-600';
@@ -762,15 +784,22 @@
                 }
             });
             bodyContainer.innerHTML = bodyHtml;
+            // Setze die Span-Weite für den Body
+            bodyContainer.style.gridColumn = "1 / span 17";
         }
 
         // =================================================================
-        // RENDERING DER KPI TABELLE
+        // RENDERING DER KPI TABELLE (Layout korrigiert)
         // =================================================================
         function renderKpiTable(KPI_YEARS) {
+            const kpiTable = document.getElementById('kpiTable');
             const headerContainer = document.getElementById('kpiTableHeader');
             const bodyContainer = document.getElementById('kpiTableBody');
             const startYear = getInputValue('startYear') || new Date().getFullYear();
+
+            // KORREKTUR: Grid-Definition im JS setzen
+            const gridCols = `minmax(240px, 1fr) repeat(8, minmax(110px, 1fr))`;
+            kpiTable.style.gridTemplateColumns = gridCols;
 
             // 1. Header generieren
             let headerHtml = `<div class="grid-cell grid-header grid-sticky-col">KPI</div>`;
@@ -778,6 +807,7 @@
                 headerHtml += `<div class="grid-cell grid-header text-right">${startYear + t}</div>`;
             }
             headerContainer.innerHTML = headerHtml;
+            headerContainer.style.gridColumn = "1 / span 9";
 
             // 2. Body generieren
             let bodyHtml = '';
@@ -802,14 +832,11 @@
                         valueDisplay = formatter.format(value);
                     }
                     
-                    // Farbgebung: Verbesserung (grün) oder Verschlechterung (rot) gegenüber T=0
                     if (t > 0) {
                          const t0Value = KPI_YEARS[0]?.[item.id] || 0;
                          if (item.id === 'returnRate' || item.id === 'marketingKUR' || item.id === 'personnelRate' || item.id === 'wareneinsatzRate') {
-                            // Je niedriger, desto besser (grün)
                             valueClass = value < t0Value ? 'text-green-600 font-semibold' : value > t0Value ? 'text-red-600 font-semibold' : '';
                          } else {
-                            // Je höher, desto besser (grün)
                             valueClass = value > t0Value ? 'text-green-600 font-semibold' : value < t0Value ? 'text-red-600 font-semibold' : '';
                          }
                     }
@@ -818,6 +845,7 @@
                 }
             });
             bodyContainer.innerHTML = bodyHtml;
+            bodyContainer.style.gridColumn = "1 / span 9";
         }
 
         // =================================================================
@@ -839,12 +867,15 @@
                     const firstSheetName = workbook.SheetNames[0];
                     const worksheet = workbook.Sheets[firstSheetName];
                     
-                    // Konvertiert das Sheet in ein Array von JSON-Objekten (Spaltenköpfe werden Keys)
                     const json = XLSX.utils.sheet_to_json(worksheet);
                     importedProjects = json;
                     
                     document.getElementById('projectImportStatus').innerHTML = `<span class="text-green-600">Erfolgreich geladen: ${importedProjects.length} Projekte.</span>`;
-                    calculateCase(); // Neuberechnung mit Projekt-Daten (Logik noch zu implementieren)
+                    
+                    // NEU: Projekteingabefelder rendern
+                    renderProjectInputs(importedProjects);
+                    
+                    calculateCase(); // Neuberechnung mit Projekt-Daten
                 } catch (error) {
                     console.error("Fehler beim Lesen der Excel-Datei:", error);
                      document.getElementById('projectImportStatus').innerHTML = '<span class="text-red-600">Fehler: Datei konnte nicht gelesen werden.</span>';
@@ -869,36 +900,38 @@
                 return;
             }
 
-            // Hier definieren wir, WAS gespeichert wird (aktuell die T=0 Inputs)
+            // Speichert T=0 Inputs UND die Projekt-Wirkungen
             const scenarioData = {
                 scenarioName: scenarioName,
                 createdAt: new Date().toISOString(),
                 userId: userId,
-                // Basis-Daten T=0
-                pnl_1_order_value: getInputValue('pnl_1_order_value'),
-                pnl_kpi_return_rate: getInputValue('pnl_kpi_return_rate'),
-                pnl_kpi_cogs_rate: getInputValue('pnl_kpi_cogs_rate'),
-                pnl_4_other_rev: getInputValue('pnl_4_other_rev'),
-                pnl_9_sales_cost: getInputValue('pnl_9_sales_cost'),
-                pnl_14_marketing: getInputValue('pnl_14_marketing'),
-                pnl_kpi_vat_rate: getInputValue('pnl_kpi_vat_rate'),
-                // TODO: Hier müssten die Logistik-Daten aus dem E-Com-Tool gespeichert werden
+                baseInputs: {
+                    pnl_1_order_value: getInputValue('pnl_1_order_value'),
+                    pnl_kpi_return_rate: getInputValue('pnl_kpi_return_rate'),
+                    pnl_kpi_cogs_rate: getInputValue('pnl_kpi_cogs_rate'),
+                    pnl_4_other_rev: getInputValue('pnl_4_other_rev'),
+                    pnl_9_sales_cost: getInputValue('pnl_9_sales_cost'),
+                    pnl_14_marketing: getInputValue('pnl_14_marketing'),
+                    pnl_kpi_vat_rate: getInputValue('pnl_kpi_vat_rate'),
+                },
+                projectEffects: aggregateProjectEffects() // Speichert die Summe der Effekte
             };
 
             try {
-                // addDoc generiert eine neue ID
-                const docRef = await addDoc(collection(db, SCENARIOS_COLLECTION_NAME), scenarioData);
-                document.getElementById('scenarioStatus').textContent = `Szenario "${scenarioName}" (ID: ${docRef.id}) gespeichert.`;
+                // KORREKTUR: Speichert in 'business_cases' Kollektion
+                const docRef = await addDoc(collection(db, BUSINESS_CASES_COLLECTION), scenarioData);
+                document.getElementById('scenarioStatus').textContent = `Business Case "${scenarioName}" gespeichert.`;
             } catch (error) {
                 console.error("Fehler beim Speichern des Szenarios: ", error);
                 document.getElementById('scenarioStatus').textContent = 'Fehler beim Speichern!';
             }
         });
 
-        // Szenario-Liste laden
+        // Szenario-Liste laden (Logistik-Szenarien)
         function loadScenariosListener() {
             if (!db) return;
-            const scenariosQuery = query(collection(db, SCENARIOS_COLLECTION_NAME));
+            // KORREKTUR: Liest aus 'scenarios' (dem E-Com Controller Tool)
+            const scenariosQuery = query(collection(db, LOGISTICS_SCENARIOS_COLLECTION));
             
             onSnapshot(scenariosQuery, (snapshot) => {
                 const selector = document.getElementById('scenarioSelector');
@@ -910,7 +943,8 @@
                     const data = doc.data();
                     const option = document.createElement('option');
                     option.value = doc.id;
-                    option.textContent = data.scenarioName || doc.id;
+                    // Annahme: Das E-Com-Tool speichert 'scenarioName'
+                    option.textContent = data.scenarioName || `Szenario ${doc.id.substring(0,5)}`;
                     if (doc.id === selectedValue) {
                         option.selected = true;
                     }
@@ -920,22 +954,17 @@
             }, (error) => {
                 console.error("Fehler beim Laden der Szenarien-Liste: ", error);
                 document.getElementById('scenarioStatus').textContent = 'Fehler: Szenarien konnten nicht geladen werden.';
-                // WICHTIG: Zeigt den Firestore-Sicherheitsregel-Fehler an
                 if (error.code === 'permission-denied') {
-                     document.getElementById('scenarioStatus').innerHTML = '<span class="text-red-600">Fehler: Zugriff verweigert. Bitte Firestore-Regeln prüfen!</span>';
+                     document.getElementById('scenarioStatus').innerHTML = '<span class="text-red-600">Fehler: Zugriff verweigert. Bitte Firestore-Regeln für "scenarios" prüfen!</span>';
                 }
             });
         }
 
-        // Ein spezifisches Szenario laden (wenn ausgewählt)
+        // Ein spezifisches Logistik-Szenario laden
         async function loadScenarioData(docId) {
-            const selector = document.getElementById('scenarioSelector');
-            // Globale Funktion im window-Scope verfügbar machen
-            window.loadScenarioData = loadScenarioData;
-
             if (!db || !docId) {
                 loadedScenarioData = null;
-                document.getElementById('scenarioStatus').textContent = 'Kein Szenario geladen.';
+                document.getElementById('scenarioStatus').textContent = 'Kein Logistik-Szenario geladen.';
                 calculateCase();
                 return;
             }
@@ -943,15 +972,16 @@
             document.getElementById('scenarioSpinner').classList.remove('hidden');
 
             try {
-                const docRef = doc(db, SCENARIOS_COLLECTION_NAME, docId);
+                // KORREKTUR: Liest aus 'scenarios'
+                const docRef = doc(db, LOGISTICS_SCENARIOS_COLLECTION, docId);
                 const docSnap = await getDoc(docRef);
 
                 if (docSnap.exists()) {
                     loadedScenarioData = docSnap.data();
-                    document.getElementById('scenarioStatus').textContent = `Szenario "${loadedScenarioData.scenarioName}" geladen.`;
+                    document.getElementById('scenarioStatus').textContent = `Logistik-Szenario "${loadedScenarioData.scenarioName}" geladen.`;
                     
-                    // TODO: Geladene Daten in die Logik einfließen lassen (aktuell simuliert in calculateCase)
-                    // Bsp: document.getElementById('pnl_kpi_return_rate').value = loadedScenarioData.pnl_kpi_return_rate;
+                    // Wende die geladenen Logistik-Daten auf die T=0 Inputs an (falls gewünscht)
+                    // (Aktuell werden sie in calculateCase() für T+1 bis T+7 verwendet)
                     
                     calculateCase(); // Neuberechnung mit den Daten des Szenarios
                 } else {
@@ -973,10 +1003,15 @@
         window.onload = function() {
             // Globale Funktionen verfügbar machen
             window.calculateCase = calculateCase;
-            window.handleFileUpload = handleFileUpload;
+            window.handleFileUpload = (event) => handleFileUpload(event); // Event-Listener für Excel
             window.loadScenarioData = loadScenarioData;
 
-            renderKpiInputMatrix(); // Zeichnet die KPI-Inputfelder
+            // Event Listener für Excel-Upload manuell binden
+            const excelFileInput = document.getElementById('excelFile');
+            if (excelFileInput) {
+                excelFileInput.addEventListener('change', handleFileUpload);
+            }
+
             initFirebase(); // Startet Firebase UND ruft calculateCase() auf
         }
     </script>
