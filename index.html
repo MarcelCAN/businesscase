@@ -387,6 +387,18 @@
                             </div>
                             <div id="scenarioStatus" class="text-xs text-gray-500 text-right w-full"></div>
                         </div>
+
+                        <!-- NEU: Stream Filter -->
+                        <div class="p-4 bg-green-50 rounded-lg shadow-inner space-y-4">
+                            <h2 class="text-xl font-bold text-green-700">Filterung (P&L / KPIs)</h2>
+                            <div class="input-group">
+                                <label for="streamFilterSelector" class="font-medium">Nach Business Stream filtern</label>
+                                <select id="streamFilterSelector" onchange="calculateCase()" class="mt-1 w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
+                                    <option value="Alle">Alle Streams</option>
+                                    <!-- JS füllt diesen Bereich dynamisch -->
+                                </select>
+                            </div>
+                        </div>
                         
                         <!-- 1. P&L STARTWERTE & ZEITACHSE -->
                         <div class="p-4 bg-indigo-50 rounded-lg shadow-inner space-y-4">
@@ -1062,7 +1074,7 @@
         // =================================================================
         // AGGREGATION DER PROJEKT-EFFEKTE (NEU)
         // =================================================================
-        function aggregateProjectEffects() {
+        function aggregateProjectEffects(streamFilter = 'Alle') {
             // Initialisiert ein leeres Objekt für die Summe der Effekte
             const aggregatedEffects = {};
             KPI_INPUT_EFFECTS.forEach(effect => {
@@ -1074,19 +1086,26 @@
 
             // Iteriere über alle importierten Projekte
             for (let i = 0; i < importedProjects.length; i++) {
-                // Iteriere über alle möglichen Effekt-Typen (Bestellwert, Retoure, etc.)
-                KPI_INPUT_EFFECTS.forEach(effect => {
-                    // Iteriere über alle 5 Planungsjahre
-                    for (let t = 1; t <= PLANNING_HORIZON; t++) {
-                        // Lese den Wert aus dem spezifischen Input-Feld des Projekts
-                        const inputId = `project_${i}_${effect.id}_T${t}`;
-                        // NEU: Verwende den globalen Speicher 'projectInputValues'
-                        const projectEffectValue = projectInputValues[inputId] || 0;
-                        
-                        // Addiere den Effekt des Projekts zur Gesamtsumme dieses Jahres
-                        aggregatedEffects[effect.id][t] += projectEffectValue;
-                    }
-                });
+                const project = importedProjects[i];
+                const projectStream = project["Business Stream"] || "N/A"; // Lese den Stream
+
+                // Wende Effekte nur an, wenn der Filter passt
+                if (streamFilter === 'Alle' || projectStream === streamFilter) {
+                    
+                    // Iteriere über alle möglichen Effekt-Typen (Bestellwert, Retoure, etc.)
+                    KPI_INPUT_EFFECTS.forEach(effect => {
+                        // Iteriere über alle 5 Planungsjahre
+                        for (let t = 1; t <= PLANNING_HORIZON; t++) {
+                            // Lese den Wert aus dem spezifischen Input-Feld des Projekts
+                            const inputId = `project_${i}_${effect.id}_T${t}`;
+                            // NEU: Verwende den globalen Speicher 'projectInputValues'
+                            const projectEffectValue = projectInputValues[inputId] || 0;
+                            
+                            // Addiere den Effekt des Projekts zur Gesamtsumme dieses Jahres
+                            aggregatedEffects[effect.id][t] += projectEffectValue;
+                        }
+                    });
+                }
             }
             return aggregatedEffects;
         }
@@ -1125,7 +1144,9 @@
             };
             
             // --- 3. AGGREGIERTE PROJEKT-EFFEKTE (NEU) ---
-            const aggregatedEffects = aggregateProjectEffects();
+            // KORREKTUR: Lese den Stream-Filter-Wert
+            const streamFilter = document.getElementById('streamFilterSelector')?.value || 'Alle';
+            const aggregatedEffects = aggregateProjectEffects(streamFilter);
 
             // --- 4. AKTUELLE KPI-WERTE (Basis für T=0) ---
             let CURRENT_KPI_BASE = {
@@ -1535,6 +1556,10 @@
             statusEl.innerHTML = `<span class="text-green-600">Erfolgreich geladen: ${importedProjects.length} Projekte.</span>`;
             projectInputValues = {}; // Setze Anpassungen zurück
             renderProjectInputs(importedProjects, projectInputValues);
+            
+            // NEU: Fülle den Stream-Filter
+            populateStreamFilter(importedProjects);
+
             calculateCase(); // Neuberechnung mit Projekt-Daten
         }
 
@@ -1551,6 +1576,29 @@
             statusEl.innerHTML = `<span class="text-green-600">Erfolgreich ${count} Basis-Parameter geladen.</span>`;
             calculateCase();
         }
+        
+        // NEU: Füllt den Stream-Filter
+        function populateStreamFilter(projects) {
+            const selector = document.getElementById('streamFilterSelector');
+            if (!selector) return;
+
+            const streams = new Set();
+            projects.forEach(p => {
+                if (p["Business Stream"]) {
+                    streams.add(p["Business Stream"]);
+                }
+            });
+            
+            selector.innerHTML = '<option value="Alle">Alle Streams</option>'; // Beginne frisch
+            
+            streams.forEach(stream => {
+                const option = document.createElement('option');
+                option.value = stream;
+                option.textContent = stream;
+                selector.appendChild(option);
+            });
+        }
+
 
         // =================================================================
         // SZENARIO SPEICHERN & LADEN
