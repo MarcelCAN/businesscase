@@ -1274,10 +1274,18 @@
             
             projects.forEach((project, index) => {
                 const projectName = project.Projektname || `Projekt ${index + 1}`; // KORREKTUR RÜCKGÄNGIG: "Projektname"
+                // NEU: Lese "Inhalt in einem Satz" und "Business Stream"
+                const projectSlogan = project["Inhalt in einem Satz"] || "";
+                const businessStream = project["Business Stream"] || "N/A";
                 
                 let projectHtml = `
-                    <div class="p-4 bg-white rounded-lg shadow-md border border-gray-200">
-                        <h3 class="text-xl font-bold text-indigo-600 mb-3">${projectName}</h3>
+                    <div class="p-4 bg-white rounded-lg shadow-md border border-gray-200" data-business-stream="${businessStream}">
+                        <h3 class="text-xl font-bold text-indigo-600 mb-1">${projectName}</h3>
+                        
+                        <!-- NEU: Projekt-Meta-Daten -->
+                        <p class="text-sm text-gray-500 mb-3 italic">"${projectSlogan}"</p>
+                        <p class="text-xs font-semibold text-indigo-500 bg-indigo-100 rounded-full px-3 py-1 inline-block mb-4">Stream: ${businessStream}</p>
+
                         
                         <!-- NEU: KI-Eingabefeld -->
                         <div class="mb-4">
