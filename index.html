@@ -15,6 +15,15 @@
         input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         input[type="number"] { -moz-appearance: textfield; }
         
+        /* NEU: Input-Felder für Formatierung (Typ text) */
+        input.formatted {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #d1d5db; /* gray-300 */
+            border-radius: 0.375rem; /* rounded-md */
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
+            width: 100%;
+        }
+        
         .spinner {
             border: 4px solid rgba(0, 0, 0, 0.1);
             border-top: 4px solid #3b82f6;
@@ -139,7 +148,28 @@
         }
         .load-dropdown select {
             flex-grow: 1;
+            border-radius: 0.375rem;
+            border-color: #d1d5db;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
         }
+        /* NEU: Delete-Button */
+        .delete-button {
+            background-color: #fee2e2; /* red-100 */
+            color: #b91c1c; /* red-700 */
+            font-weight: 700;
+            border-radius: 50%;
+            width: 38px; /* Feste Breite */
+            height: 38px; /* Feste Höhe */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            border: 1px solid #fecaca; /* red-300 */
+        }
+        .delete-button:hover {
+            background-color: #fecaca; /* red-200 */
+        }
+
         /* Styling für Logistik-Inputs */
         .logistics-input-grid {
             display: grid;
@@ -156,12 +186,11 @@
             color: #374151; /* gray-700 */
             margin-bottom: 0.25rem;
         }
-        .input-group input {
-            padding: 0.5rem 0.75rem;
-            border: 1px solid #d1d5db; /* gray-300 */
-            border-radius: 0.375rem; /* rounded-md */
-            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
+        /* Verwendung der .formatted-Klasse für Inputs */
+        .input-group input.formatted {
+             /* Stile sind bereits oben definiert */
         }
+
         /* Styling für Datei-Upload-Felder */
         .file-upload-input {
             display: block;
@@ -215,6 +244,45 @@
         input:checked + .slider:before {
           transform: translateX(26px);
         }
+        
+        /* NEU: Logistik-Rechner Ergebnis-Box */
+        .logi-result-box {
+            background-color: #f0f9ff; /* sky-50 */
+            border: 1px solid #bae6fd; /* sky-200 */
+            padding: 1rem;
+            border-radius: 0.5rem;
+        }
+        .logi-result-box h4 {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: #0c4a6e; /* sky-800 */
+            border-bottom: 2px solid #bae6fd;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .logi-result-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        .logi-result-item {
+            background-color: #ffffff;
+            padding: 0.75rem;
+            border-radius: 0.375rem;
+            border: 1px solid #e0f2fe;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+        }
+        .logi-result-item dt {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #6b7280;
+            truncate: true;
+        }
+        .logi-result-item dd {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #0c4a6e;
+        }
 
     </style>
 </head>
@@ -265,11 +333,40 @@
             
                     <!-- Linke Spalte: Eingaben & Steuerung -->
                     <div class="lg:col-span-1 space-y-8">
+                        
+                        <!-- NEU: Laden/Löschen (Hierher verschoben) -->
+                        <div class="p-4 bg-gray-50 rounded-lg shadow-inner space-y-4">
+                            <h2 class="text-xl font-bold text-gray-700">Laden & Löschen</h2>
+                             <!-- Business Case Laden -->
+                            <div class="p-2 border rounded-lg bg-white">
+                                <label for="caseSelector" class="block text-sm font-medium text-gray-700 mb-1">Business Case (Gesamtes Tool)</label>
+                                <div class="load-dropdown">
+                                     <select id="caseSelector" class="block w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
+                                        <option value="">--- Business Case laden ---</option>
+                                    </select>
+                                    <button id="deleteCaseBtn" class="delete-button" title="Ausgewählten Business Case löschen">X</button>
+                                    <div id="caseSpinner" class="hidden spinner"></div>
+                                </div>
+                            </div>
+                            <!-- Logistik Szenario Laden -->
+                            <div class="p-2 border rounded-lg bg-white">
+                                <label for="scenarioSelector" class="block text-sm font-medium text-gray-700 mb-1">Logistik-Szenario (T=0 Logistik)</label>
+                                <div class="load-dropdown">
+                                     <select id="scenarioSelector" onchange="loadScenarioData(this.value)" class="block w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
+                                        <option value="">--- Logistik-Szenario laden ---</option>
+                                    </select>
+                                    <button id="deleteLogisticsBtn" class="delete-button" title="Ausgewähltes Logistik-Szenario löschen">X</button>
+                                    <div id="scenarioSpinner" class="hidden spinner"></div>
+                                </div>
+                            </div>
+                            <div id="scenarioStatus" class="text-xs text-gray-500 text-right w-full"></div>
+                        </div>
+                        
                         <!-- 1. P&L STARTWERTE & ZEITACHSE -->
                         <div class="p-4 bg-indigo-50 rounded-lg shadow-inner space-y-4">
                             <h2 class="text-xl font-bold text-indigo-700">1. Basis & Zeitachse (T=0)</h2>
                             
-                            <!-- NEU: Basis-Werte Upload -->
+                            <!-- Basis-Werte Upload -->
                             <div class="p-3 bg-white rounded-lg border border-indigo-200">
                                 <label for="baseInputsExcelFile" class="block text-sm font-medium text-gray-700 mb-1">Basis-Werte (T=0) per Excel laden</label>
                                 <input type="file" id="baseInputsExcelFile" accept=".xlsx, .xls" class="file-upload-input">
@@ -278,11 +375,11 @@
 
                             <div class="input-group">
                                 <label for="startYear">Start-Jahr (T=0)</label>
-                                <input type="number" id="startYear" value="2024" min="2000" max="2100" step="1" oninput="calculateCase()">
+                                <input type="number" id="startYear" value="2024" min="2000" max="2100" step="1" oninput="calculateCase()" class="formatted">
                             </div>
                             <div class="input-group">
                                 <label for="pnl_kpi_vat_rate">Mehrwertsteuersatz (MwSt. %)</label>
-                                <input type="number" id="pnl_kpi_vat_rate" value="19.0" min="0" max="100" step="0.1" oninput="calculateCase()">
+                                <input type="text" id="pnl_kpi_vat_rate" value="19.0" data-raw-value="19.0" onfocus="unformatInput(this)" onblur="formatInput(this, '%')" class="formatted">
                             </div>
                             
                             <h3 class="text-md font-semibold text-indigo-700 mt-4">Basis-Werte (Manuell T=0)</h3>
@@ -291,19 +388,19 @@
                             <div class="space-y-4 pr-2">
                                 <div class="input-group">
                                     <label for="pnl_1_order_value">Bestellwert (Brutto €)</label>
-                                    <input type="number" id="pnl_1_order_value" value="1500000" oninput="calculateCase()">
+                                    <input type="text" id="pnl_1_order_value" value="1.500.000 €" data-raw-value="1500000" onfocus="unformatInput(this)" onblur="formatInput(this, '€')" class="formatted">
                                 </div>
                                 <div class="input-group">
                                     <label for="pnl_kpi_return_rate">Retourenquote (%)</label>
-                                    <input type="number" id="pnl_kpi_return_rate" value="25.0" oninput="calculateCase()">
+                                    <input type="text" id="pnl_kpi_return_rate" value="25,0 %" data-raw-value="25.0" onfocus="unformatInput(this)" onblur="formatInput(this, '%')" class="formatted">
                                 </div>
                                 <div class="input-group">
                                     <label for="pnl_kpi_cogs_rate">Wareneinsatzquote (%)</label>
-                                    <input type="number" id="pnl_kpi_cogs_rate" value="40.0" oninput="calculateCase()">
+                                    <input type="text" id="pnl_kpi_cogs_rate" value="40,0 %" data-raw-value="40.0" onfocus="unformatInput(this)" onblur="formatInput(this, '%')" class="formatted">
                                 </div>
                                  <div class="input-group">
                                     <label for="pnl_4_other_rev">Sonstige Erlöse (Netto €)</label>
-                                    <input type="number" id="pnl_4_other_rev" value="10000" oninput="calculateCase()">
+                                    <input type="text" id="pnl_4_other_rev" value="10.000 €" data-raw-value="10000" onfocus="unformatInput(this)" onblur="formatInput(this, '€')" class="formatted">
                                 </div>
                                 
                                 <h4 class="text-sm font-semibold text-indigo-600 pt-2 border-t border-indigo-200">Logistik (Manuell)</h4>
@@ -319,64 +416,64 @@
                                 <div id="manualLogisticsInputs" class="hidden space-y-4 pl-4 border-l-2 border-gray-300">
                                     <div class="input-group">
                                         <label for="pnl_6_log_cost">Logistikkosten (OPC, P&P, etc.) (€)</label>
-                                        <input type="number" id="pnl_6_log_cost" value="50000" oninput="calculateCase()">
+                                        <input type="text" id="pnl_6_log_cost" value="50.000 €" data-raw-value="50000" onfocus="unformatInput(this)" onblur="formatInput(this, '€')" class="formatted">
                                     </div>
                                     <div class="input-group">
                                         <label for="pnl_7_shipping_out">Ausgangsfracht (€)</label>
-                                        <input type="number" id="pnl_7_shipping_out" value="30000" oninput="calculateCase()">
+                                        <input type="text" id="pnl_7_shipping_out" value="30.000 €" data-raw-value="30000" onfocus="unformatInput(this)" onblur="formatInput(this, '€')" class="formatted">
                                     </div>
                                     <div class="input-group">
                                         <label for="pnl_8_shipping_return">Retourenfracht (€)</label>
-                                        <input type="number" id="pnl_8_shipping_return" value="20000" oninput="calculateCase()">
+                                        <input type="text" id="pnl_8_shipping_return" value="20.000 €" data-raw-value="20000" onfocus="unformatInput(this)" onblur="formatInput(this, '€')" class="formatted">
                                     </div>
                                 </div>
 
                                 <h4 class="text-sm font-semibold text-indigo-600 pt-2 border-t border-indigo-200">Direkte Kosten</h4>
                                 <div class="input-group">
                                     <label for="pnl_9_sales_cost">Vertriebskosten (€)</label>
-                                    <input type="number" id="pnl_9_sales_cost" value="50000" oninput="calculateCase()">
+                                    <input type="text" id="pnl_9_sales_cost" value="50.000 €" data-raw-value="50000" onfocus="unformatInput(this)" onblur="formatInput(this, '€')" class="formatted">
                                 </div>
                                 <div class="input-group">
                                     <label for="pnl_10_personnel_direct">Personalkosten (Dir. €)</label>
-                                    <input type="number" id="pnl_10_personnel_direct" value="40000" oninput="calculateCase()">
+                                    <input type="text" id="pnl_10_personnel_direct" value="40.000 €" data-raw-value="40000" onfocus="unformatInput(this)" onblur="formatInput(this, '€')" class="formatted">
                                 </div>
                                 <div class="input-group">
                                     <label for="pnl_11_material_cost">Sachkosten (€)</label>
-                                    <input type="number" id="pnl_11_material_cost" value="10000" oninput="calculateCase()">
+                                    <input type="text" id="pnl_11_material_cost" value="10.000 €" data-raw-value="10000" onfocus="unformatInput(this)" onblur="formatInput(this, '€')" class="formatted">
                                 </div>
                                 <div class="input-group">
                                     <label for="pnl_12_depreciation_direct">Abschreibungen (Dir. €)</label>
-                                    <input type="number" id="pnl_12_depreciation_direct" value="10000" oninput="calculateCase()">
+                                    <input type="text" id="pnl_12_depreciation_direct" value="10.000 €" data-raw-value="10000" onfocus="unformatInput(this)" onblur="formatInput(this, '€')" class="formatted">
                                 </div>
                                 <div class="input-group">
                                     <label for="pnl_13_recharge_direct">Verrechnung (Dir. €)</label>
-                                    <input type="number" id="pnl_13_recharge_direct" value="20000" oninput="calculateCase()">
+                                    <input type="text" id="pnl_13_recharge_direct" value="20.000 €" data-raw-value="20000" onfocus="unformatInput(this)" onblur="formatInput(this, '€')" class="formatted">
                                 </div>
 
                                 <h4 class="text-sm font-semibold text-indigo-600 pt-2 border-t border-indigo-200">Gemeinkosten</h4>
                                 <div class="input-group">
                                     <label for="pnl_14_marketing">Zentrale Vermarktung (€)</label>
-                                    <input type="number" id="pnl_14_marketing" value="80000" oninput="calculateCase()">
+                                    <input type="text" id="pnl_14_marketing" value="80.000 €" data-raw-value="80000" onfocus="unformatInput(this)" onblur="formatInput(this, '€')" class="formatted">
                                 </div>
                                 <div class="input-group">
                                     <label for="pnl_15_personnel_overhead">Personalkosten (Overhead €)</label>
-                                    <input type="number" id="pnl_15_personnel_overhead" value="60000" oninput="calculateCase()">
+                                    <input type="text" id="pnl_15_personnel_overhead" value="60.000 €" data-raw-value="60000" onfocus="unformatInput(this)" onblur="formatInput(this, '€')" class="formatted">
                                 </div>
                                 <div class="input-group">
                                     <label for="pnl_16_depreciation_overhead">Abschreibungen (Overhead €)</label>
-                                    <input type="number" id="pnl_16_depreciation_overhead" value="20000" oninput="calculateCase()">
+                                    <input type="text" id="pnl_16_depreciation_overhead" value="20.000 €" data-raw-value="20000" onfocus="unformatInput(this)" onblur="formatInput(this, '€')" class="formatted">
                                 </div>
                                 <div class="input-group">
                                     <label for="pnl_17_recharge_overhead">Verrechnung (Overhead €)</label>
-                                    <input type="number" id="pnl_17_recharge_overhead" value="10000" oninput="calculateCase()">
+                                    <input type="text" id="pnl_17_recharge_overhead" value="10.000 €" data-raw-value="10000" onfocus="unformatInput(this)" onblur="formatInput(this, '€')" class="formatted">
                                 </div>
                                 <div class="input-group">
                                     <label for="pnl_18_production">Produktion (€)</label>
-                                    <input type="number" id="pnl_18_production" value="10000" oninput="calculateCase()">
+                                    <input type="text" id="pnl_18_production" value="10.000 €" data-raw-value="10000" onfocus="unformatInput(this)" onblur="formatInput(this, '€')" class="formatted">
                                 </div>
                                 <div class="input-group">
                                     <label for="pnl_19_it_admin">IT/Admin (€)</label>
-                                    <input type="number" id="pnl_19_it_admin" value="20000" oninput="calculateCase()">
+                                    <input type="text" id="pnl_19_it_admin" value="20.000 €" data-raw-value="20000" onfocus="unformatInput(this)" onblur="formatInput(this, '€')" class="formatted">
                                 </div>
                             </div>
 
@@ -404,7 +501,7 @@
                             </div>
                         </div>
                         
-                        <p class="text-sm text-gray-500 mt-4">Hinweis: Die Logistikkosten basieren in T+1 bis T+5 auf dem geladenen Szenario und den durch den Boost erhöhten Bestellwerten.</p>
+                        <p class="text-sm text-gray-500 mt-4">Hinweis: Die Logistikkosten basieren in T+1 bis T+5 auf den Werten aus Tab 3 und den geänderten KPIs.</p>
                     </div>
 
                 </div>
@@ -447,84 +544,87 @@
                         <h2 class="text-2xl font-bold text-blue-700 mb-4">Logistik-Parameter (T=0 Basis)</h2>
                         <p class="text-sm text-gray-600 mb-6">
                             Dies sind die T=0 Basis-Parameter für die Logistikkosten-Berechnung (wenn in Tab 1 aktiviert).
-                            Sie können ein gespeichertes "Logistik-Szenario" (aus dem E-Com-Tool) laden, um diese Felder zu füllen.
                         </p>
-
-                        <!-- Lade-Dropdowns (Hierher verschoben) -->
-                        <div class="flex flex-col md:flex-row gap-4 mb-6">
-                            <!-- Business Case Laden -->
-                            <div class="flex-1 p-4 border rounded-lg bg-white">
-                                <label for="caseSelector" class="block text-sm font-medium text-gray-700 mb-1">1. Business Case laden (Gesamtes Tool)</label>
-                                <div class="load-dropdown">
-                                     <select id="caseSelector" class="block w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
-                                        <option value="">--- Business Case laden ---</option>
-                                    </select>
-                                    <div id="caseSpinner" class="hidden spinner"></div>
-                                </div>
-                            </div>
-                            <!-- Logistik Szenario Laden -->
-                            <div class="flex-1 p-4 border rounded-lg bg-white">
-                                <label for="scenarioSelector" class="block text-sm font-medium text-gray-700 mb-1">2. Logistik-Szenario laden (Nur T=0 Logistik)</label>
-                                <div class="load-dropdown">
-                                     <select id="scenarioSelector" onchange="loadScenarioData(this.value)" class="block w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
-                                        <option value="">--- Logistik-Szenario laden ---</option>
-                                    </select>
-                                    <div id="scenarioSpinner" class="hidden spinner"></div>
-                                </div>
-                            </div>
-                        </div>
                         
                         <!-- 11 Logistik-Input-Felder -->
                         <div class="logistics-input-grid">
                             <div class="input-group">
                                 <label for="log_aspBrutto">Durchschnitts-VK (Brutto €)</label>
-                                <input type="number" id="log_aspBrutto" value="65.0" step="0.1" oninput="calculateCase()">
+                                <input type="text" id="log_aspBrutto" value="65,00 €" data-raw-value="65.0" onfocus="unformatInput(this)" onblur="formatInput(this, '€', 2)" class="formatted">
                             </div>
                             <div class="input-group">
                                 <label for="log_ipo">Artikel / Bestellung (IPO)</label>
-                                <input type="number" id="log_ipo" value="1.2" step="0.1" oninput="calculateCase()">
+                                <input type="text" id="log_ipo" value="1,2" data-raw-value="1.2" onfocus="unformatInput(this)" onblur="formatInput(this, 'float', 1)" class="formatted">
                             </div>
                             <div class="input-group">
                                 <label for="log_ipr">Artikel / Retourensendung (IPR)</label>
-                                <input type="number" id="log_ipr" value="1.1" step="0.1" oninput="calculateCase()">
+                                <input type="text" id="log_ipr" value="1,1" data-raw-value="1.1" onfocus="unformatInput(this)" onblur="formatInput(this, 'float', 1)" class="formatted">
                             </div>
 
                             <div class="input-group">
                                 <label for="log_goodsReceiptCostPerItem">Warenannahme (pro Artikel €)</label>
-                                <input type="number" id="log_goodsReceiptCostPerItem" value="0.50" step="0.01" oninput="calculateCase()">
+                                <input type="text" id="log_goodsReceiptCostPerItem" value="0,50 €" data-raw-value="0.50" onfocus="unformatInput(this)" onblur="formatInput(this, '€', 2)" class="formatted">
                             </div>
                             <div class="input-group">
                                 <label for="log_orderProcessingCostPerOrder">Auftragsverarbeitung (pro Bestellung €)</label>
-                                <input type="number" id="log_orderProcessingCostPerOrder" value="1.50" step="0.01" oninput="calculateCase()">
+                                <input type="text" id="log_orderProcessingCostPerOrder" value="1,50 €" data-raw-value="1.50" onfocus="unformatInput(this)" onblur="formatInput(this, '€', 2)" class="formatted">
                             </div>
                             <div class="input-group">
                                 <label for="log_pickPackCostPerItem">Pick & Pack (pro Artikel €)</label>
-                                <input type="number" id="log_pickPackCostPerItem" value="1.10" step="0.01" oninput="calculateCase()">
+                                <input type="text" id="log_pickPackCostPerItem" value="1,10 €" data-raw-value="1.10" onfocus="unformatInput(this)" onblur="formatInput(this, '€', 2)" class="formatted">
                             </div>
                             <div class="input-group">
                                 <label for="log_returnProcessingCostPerItem">Retouren-Aufbereitung (pro Artikel €)</label>
-                                <input type="number" id="log_returnProcessingCostPerItem" value="2.50" step="0.01" oninput="calculateCase()">
+                                <input type="text" id="log_returnProcessingCostPerItem" value="2,50 €" data-raw-value="2.50" onfocus="unformatInput(this)" onblur="formatInput(this, '€', 2)" class="formatted">
                             </div>
                             
                             <div class="input-group">
                                 <label for="log_storageCostPerItemPerMonth">Lagerung (pro Artikel / Monat €)</label>
-                                <input type="number" id="log_storageCostPerItemPerMonth" value="0.10" step="0.01" oninput="calculateCase()">
+                                <input type="text" id="log_storageCostPerItemPerMonth" value="0,10 €" data-raw-value="0.10" onfocus="unformatInput(this)" onblur="formatInput(this, '€', 2)" class="formatted">
                             </div>
                             <div class="input-group">
                                 <label for="log_avgStorageDurationMonths">Durchschn. Lagerdauer (Monate)</label>
-                                <input type="number" id="log_avgStorageDurationMonths" value="3.0" step="0.1" oninput="calculateCase()">
+                                <input type="text" id="log_avgStorageDurationMonths" value="3,0" data-raw-value="3.0" onfocus="unformatInput(this)" onblur="formatInput(this, 'float', 1)" class="formatted">
                             </div>
 
                             <div class="input-group">
                                 <label for="log_shippingCostOut">Versandkosten (Outbound €)</label>
-                                <input type="number" id="log_shippingCostOut" value="4.99" step="0.01" oninput="calculateCase()">
+                                <input type="text" id="log_shippingCostOut" value="4,99 €" data-raw-value="4.99" onfocus="unformatInput(this)" onblur="formatInput(this, '€', 2)" class="formatted">
                             </div>
                             <div class="input-group">
                                 <label for="log_shippingCostReturnShipment">Versandkosten (Retoure €)</label>
-                                <input type="number" id="log_shippingCostReturnShipment" value="5.99" step="0.01" oninput="calculateCase()">
+                                <input type="text" id="log_shippingCostReturnShipment" value="5,99 €" data-raw-value="5.99" onfocus="unformatInput(this)" onblur="formatInput(this, '€', 2)" class="formatted">
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- NEU: Logistik-Kalkulator Ergebnis-Box -->
+                    <div class="logi-result-box mt-8">
+                        <h4>Logistik-Kalkulator (T=0 Vorschau)</h4>
+                        <div class="logi-result-grid">
+                            <div class="logi-result-item">
+                                <dt>Bestellvolumen (Anzahl)</dt>
+                                <dd id="log_calc_bestellungen">0</dd>
+                            </div>
+                            <div class="logi-result-item">
+                                <dt>Nettoumsatz (Berechnet)</dt>
+                                <dd id="log_calc_netto_umsatz">0 €</dd>
+                            </div>
+                            <div class="logi-result-item">
+                                <dt>Gesamte Logistikkosten</dt>
+                                <dd id="log_calc_gesamtkosten">0 €</dd>
+                            </div>
+                            <div class="logi-result-item">
+                                <dt>Logistikkosten (% v. Netto-Umsatz)</dt>
+                                <dd id="log_calc_kosten_pro_netto_umsatz">0,0 %</dd>
+                            </div>
+                            <div class="logi-result-item">
+                                <dt>Logistikkosten (pro Bestellung)</dt>
+                                <dd id="log_calc_kosten_pro_bestellung">0,00 €</dd>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
@@ -535,7 +635,7 @@
         // Importiere Firebase Module
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, setPersistence, browserSessionPersistence, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, onSnapshot, collection, query, doc, getDoc, setDoc, setLogLevel, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, onSnapshot, collection, query, doc, getDoc, setDoc, setLogLevel, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Globale Variablen
         let db;
@@ -549,35 +649,99 @@
 
         let loadedLogisticsScenarioData = null; // Hält nur geladene Logistik-Daten
         let importedProjects = []; 
-        let projectInputValues = {}; // NEU: Speichert Projekt-Input-Anpassungen
+        let projectInputValues = {}; // Speichert Projekt-Input-Anpassungen
         const PLANNING_HORIZON = 5; // T+1 bis T+5 (REDUZIERT)
 
         // Hilfsfunktionen zur Formatierung
-        const formatter = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0, maximumFractionDigits: 0 });
-        const percentFormatter = new Intl.NumberFormat('de-DE', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 });
-        const numberFormatter = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        const formatterEuro = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        const formatterEuro2Dec = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const formatterPercent = new Intl.NumberFormat('de-DE', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 });
+        const formatterNumber = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        const formatterFloat1 = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
 
         // =================================================================
         // HILFSFUNKTIONEN
         // =================================================================
         
         /**
-         * Hilfsfunktion für den fehlerfreien Zugriff auf Input-Werte.
+         * Liest den 'data-raw-value' oder den .value
          */
         const getInputValue = (id) => {
             const element = document.getElementById(id);
-            return parseFloat(element?.value) || 0;
+            if (!element) return 0;
+            if (element.dataset.rawValue !== undefined) {
+                return parseFloat(element.dataset.rawValue) || 0;
+            }
+            // Fallback für 'number' inputs (wie startYear)
+            return parseFloat(element.value) || 0;
         };
         
         /**
-         * Hilfsfunktion zum sicheren Setzen von Input-Werten.
+         * Setzt den 'data-raw-value' UND den formatierten .value
          */
         const setInputValue = (id, value) => {
             const element = document.getElementById(id);
             if (element) {
-                element.value = value || 0;
+                const numValue = parseFloat(value) || 0;
+                
+                // Setze den Rohwert, der für Berechnungen genutzt wird
+                if (element.dataset.rawValue !== undefined) {
+                    element.dataset.rawValue = numValue;
+                }
+                
+                // Setze den formatierten Wert, den der Nutzer sieht
+                if (id.includes('rate') || id.includes('cogs')) {
+                    element.value = formatterPercent.format(numValue / 100);
+                } else if (id.includes('ipo') || id.includes('ipr') || id.includes('avgStorage')) {
+                    element.value = formatterFloat1.format(numValue);
+                } else if (id.includes('shipping') || id.includes('CostPer') || id.includes('log_asp')) {
+                     element.value = formatterEuro2Dec.format(numValue);
+                } else if (id === 'startYear') {
+                     element.value = numValue; // Keine Formatierung für Jahr
+                } else {
+                    element.value = formatterEuro.format(numValue); // Standard Euro-Formatierung
+                }
             }
         };
+
+        /**
+         * NEU: Formatiert Inputs beim Verlassen (onblur)
+         */
+        function formatInput(element, type, decimals = 0) {
+            // Ersetze deutsche Kommas durch Punkte für JS
+            let rawValue = parseFloat(element.value.replace(/[^0-9,-]+/g, '').replace(',', '.')) || 0;
+            
+            // Bei Prozent, teile durch 100, wenn der Nutzer eine große Zahl eingibt (z.B. 25 statt 0.25)
+            if (type === '%' && rawValue > 1) { 
+                // Ignoriere diesen Teil, da wir den Rohwert speichern (25 = 25%)
+            }
+            
+            element.dataset.rawValue = rawValue;
+            
+            if (type === '€') {
+                if (decimals === 2) {
+                    element.value = formatterEuro2Dec.format(rawValue);
+                } else {
+                    element.value = formatterEuro.format(rawValue);
+                }
+            } else if (type === '%') {
+                element.value = formatterPercent.format(rawValue / 100);
+            } else if (type === 'float') {
+                element.value = formatterFloat1.format(rawValue);
+            }
+            calculateCase();
+        }
+
+        /**
+         * NEU: Entfernt Formatierung beim Betreten (onfocus)
+         */
+        function unformatInput(element) {
+            // Zeige den reinen Rohwert (z.B. 25.0 statt 25,0 %)
+            element.value = element.dataset.rawValue || 0;
+            element.select();
+        }
+
 
         /**
          * NEU: Tab-Wechsel-Logik
@@ -955,7 +1119,8 @@
             const KPI_YEARS = {}; // Speichert KPIs für jedes Jahr
             
             // NEU: Logistik-Toggle-Status
-            const isCalculatedLogistics = document.getElementById('logisticsToggle').checked;
+            const logisticsToggle = document.getElementById('logisticsToggle');
+            const isCalculatedLogistics = logisticsToggle ? logisticsToggle.checked : true;
 
             // T=0 ist die Basis
             const T0_Result = calculateSinglePnl(inputsT0, baseLogisticsCosts, CURRENT_KPI_BASE, isCalculatedLogistics);
@@ -1033,6 +1198,43 @@
             // --- 6. DOM AKTUALISIEREN ---
             renderPnlTable(PNL_YEARS);
             renderKpiTable(KPI_YEARS);
+            
+            // NEU: Logistik-Tab-Rechner aktualisieren
+            calculateLogisticsTab(inputsT0, baseLogisticsCosts);
+        }
+
+        // =================================================================
+        // NEU: LOGISTIK-TAB RECHNER (für T=0 Vorschau)
+        // =================================================================
+        function calculateLogisticsTab(inputsT0, baseLogisticsCosts) {
+             try {
+                // Diese Funktion berechnet die T=0 Logistik-Vorschau basierend auf den aktuellen
+                // T=0 P&L Inputs und den T=0 Logistik-Parametern.
+                
+                const returnRate = inputsT0.pnl_kpi_return_rate;
+                const vatFactor = 1 + (inputsT0.pnl_kpi_vat_rate / 100);
+
+                // Berechne T=0 Nettoumsatz (Basis für Logistik-Berechnung)
+                const netOrderValue = inputsT0.pnl_1_order_value / vatFactor;
+                const t0_netRevenue = netOrderValue * (1 - returnRate / 100);
+
+                const result = calculateDetailedLogistics(t0_netRevenue, baseLogisticsCosts, returnRate);
+                
+                const totalCosts = result.Logistikkosten + result.Ausgangsfracht + result.Retourenfracht;
+                
+                document.getElementById('log_calc_bestellungen').textContent = formatterNumber.format(result.ordersVolume);
+                document.getElementById('log_calc_netto_umsatz').textContent = formatterEuro.format(t0_netRevenue);
+                document.getElementById('log_calc_gesamtkosten').textContent = formatterEuro.format(totalCosts);
+                
+                const costPercent = (t0_netRevenue > 0) ? (totalCosts / t0_netRevenue) : 0;
+                document.getElementById('log_calc_kosten_pro_netto_umsatz').textContent = formatterPercent.format(costPercent);
+                
+                const costPerOrder = (result.ordersVolume > 0) ? (totalCosts / result.ordersVolume) : 0;
+                document.getElementById('log_calc_kosten_pro_bestellung').textContent = formatterEuro2Dec.format(costPerOrder);
+
+            } catch (e) {
+                console.error("Fehler im Logistik-Tab-Rechner:", e);
+            }
         }
 
         // =================================================================
@@ -1093,7 +1295,7 @@
                         projectInputValues[inputId] = value;
 
                         projectHtml += `<div class="grid-cell">
-                                    <input type="number" id="${inputId}" value="${value.toFixed(1)}" step="0.1" oninput="updateProjectInputValue('${inputId}', this.value)">
+                                    <input type="text" id="${inputId}" value="${formatterFloat1.format(value)}" data-raw-value="${value}" onfocus="unformatInput(this)" onblur="formatInput(this, 'float', 1)" class="formatted">
                                  </div>`;
                     }
                 });
@@ -1105,8 +1307,12 @@
 
         // NEU: Funktion zum Speichern von Projekt-Input-Änderungen
         function updateProjectInputValue(inputId, value) {
-            projectInputValues[inputId] = parseFloat(value) || 0;
-            calculateCase(); // Berechne die P&L neu, wenn ein Projektwert geändert wird
+            // Beim Ändern eines Projekt-Inputs, speichere den Rohwert und berechne neu
+            const element = document.getElementById(inputId);
+            if (element) {
+                element.dataset.rawValue = parseFloat(element.value.replace(/[^0-9,-]+/g, '').replace(',', '.')) || 0;
+            }
+            calculateCase(); 
         }
         
         // =================================================================
@@ -1152,14 +1358,14 @@
                         percentDisplay = 'N/A';
                         valueClass = 'font-semibold bg-yellow-50';
                     } else {
-                        valueDisplay = formatter.format(value);
+                        valueDisplay = formatterEuro.format(value);
                         
                         if (item.id === 'pnl_1_order_value' || item.id === 'pnl_2_mwst') {
                              percentDisplay = 'N/A';
                         } else if (item.id === 'pnl_3_revenue_fakturiert') {
-                             percentDisplay = percentFormatter.format(1); // Umsatz ist immer 100% seiner selbst
+                             percentDisplay = formatterPercent.format(1); // Umsatz ist immer 100% seiner selbst
                         } else {
-                            percentDisplay = percentFormatter.format(value / baseRevenue);
+                            percentDisplay = formatterPercent.format(value / baseRevenue);
                         }
                     }
                     
@@ -1211,11 +1417,11 @@
                     if (item.id === 'returnRate' || item.id === 'marketingKUR' || item.id === 'personnelRate' || item.id === 'wareneinsatzRate') {
                         valueDisplay = `${value.toFixed(1)} %`;
                     } else if (item.id === 'ordersVolume') {
-                        valueDisplay = numberFormatter.format(value);
+                        valueDisplay = formatterNumber.format(value);
                     } else if (item.id === 'itemsPerOrder') {
                          valueDisplay = value.toFixed(2);
                     } else {
-                        valueDisplay = formatter.format(value);
+                        valueDisplay = formatterEuro.format(value);
                     }
                     
                     if (t > 0) {
@@ -1287,7 +1493,7 @@
             json.forEach(row => {
                 // Erwartet Spalten "Parameter" (ID) und "Wert"
                 if (row.Parameter && row.Wert !== undefined) {
-                    setInputValue(row.Parameter, row.Wert);
+                    setInputValue(row.Parameter, row.Wert); // Setzt den formatierten Wert
                     count++;
                 }
             });
@@ -1362,6 +1568,7 @@
             
             onSnapshot(scenariosQuery, (snapshot) => {
                 const selector = document.getElementById('scenarioSelector');
+                if (!selector) return;
                 const selectedValue = selector.value;
                 
                 selector.innerHTML = '<option value="">--- Logistik-Szenario laden ---</option>';
@@ -1393,6 +1600,7 @@
             
             onSnapshot(casesQuery, (snapshot) => {
                 const selector = document.getElementById('caseSelector');
+                if (!selector) return;
                 const selectedValue = selector.value;
                 
                 selector.innerHTML = '<option value="">--- Business Case laden ---</option>';
@@ -1522,6 +1730,70 @@
             }
         }
 
+        // NEU: LÖSCHFUNKTIONEN
+        async function deleteBusinessCase() {
+            const selector = document.getElementById('caseSelector');
+            const docId = selector.value;
+            if (!docId) {
+                document.getElementById('scenarioStatus').textContent = 'Kein Case zum Löschen ausgewählt.';
+                return;
+            }
+            
+            // Simuliere Bestätigung (da window.confirm verboten ist)
+            document.getElementById('scenarioStatus').textContent = `Case "${selector.options[selector.selectedIndex].text}" wirklich löschen? (Klicken Sie erneut zum Bestätigen)`;
+            
+            // Einfache "Doppelklick"-Logik als Ersatz für confirm()
+            if (selector.dataset.deletePending === docId) {
+                try {
+                    await deleteDoc(doc(db, BUSINESS_CASES_COLLECTION, docId));
+                    document.getElementById('scenarioStatus').textContent = 'Business Case gelöscht.';
+                    selector.dataset.deletePending = null;
+                } catch (e) {
+                    console.error("Fehler beim Löschen (Case):", e);
+                    document.getElementById('scenarioStatus').textContent = 'Fehler beim Löschen.';
+                }
+            } else {
+                selector.dataset.deletePending = docId;
+                // Setze den Bestätigungsstatus nach 3 Sekunden zurück
+                setTimeout(() => { 
+                    if (selector.dataset.deletePending === docId) {
+                         selector.dataset.deletePending = null;
+                         document.getElementById('scenarioStatus').textContent = '';
+                    }
+                }, 3000);
+            }
+        }
+
+        async function deleteLogisticsScenario() {
+            const selector = document.getElementById('scenarioSelector');
+            const docId = selector.value;
+            if (!docId) {
+                document.getElementById('scenarioStatus').textContent = 'Kein Logistik-Szenario zum Löschen ausgewählt.';
+                return;
+            }
+            
+             if (selector.dataset.deletePending === docId) {
+                try {
+                    await deleteDoc(doc(db, LOGISTICS_SCENARIOS_COLLECTION, docId));
+                    document.getElementById('scenarioStatus').textContent = 'Logistik-Szenario gelöscht.';
+                    selector.dataset.deletePending = null;
+                } catch (e) {
+                    console.error("Fehler beim Löschen (Logistik):", e);
+                    document.getElementById('scenarioStatus').textContent = 'Fehler beim Löschen.';
+                }
+            } else {
+                selector.dataset.deletePending = docId;
+                document.getElementById('scenarioStatus').textContent = `Logistik-Szenario "${selector.options[selector.selectedIndex].text}" wirklich löschen? (Klicken Sie erneut zum Bestätigen)`;
+                setTimeout(() => { 
+                    if (selector.dataset.deletePending === docId) {
+                         selector.dataset.deletePending = null;
+                         document.getElementById('scenarioStatus').textContent = '';
+                    }
+                }, 3000);
+            }
+        }
+
+
         // =================================================================
         // STARTPUNKT
         // =================================================================
@@ -1533,6 +1805,9 @@
             window.showTab = showTab;
             window.updateProjectInputValue = updateProjectInputValue; // NEU
             window.toggleManualLogistics = toggleManualLogistics; // NEU
+            // NEU: Formatierungsfunktionen global machen
+            window.formatInput = formatInput;
+            window.unformatInput = unformatInput;
 
             // Event Listener für Excel-Uploads
             setupExcelUpload('excelFileProjects', 'projectImportStatus', handleProjectUploadCallback);
@@ -1540,10 +1815,11 @@
 
 
             // NEU: Event Listener für Business Case Lade-Dropdown
-            const caseSelector = document.getElementById('caseSelector');
-            if (caseSelector) {
-                caseSelector.addEventListener('change', (e) => loadBusinessCase(e.target.value));
-            }
+            document.getElementById('caseSelector')?.addEventListener('change', (e) => loadBusinessCase(e.target.value));
+            
+            // NEU: Event Listener für Delete-Buttons
+            document.getElementById('deleteCaseBtn')?.addEventListener('click', deleteBusinessCase);
+            document.getElementById('deleteLogisticsBtn')?.addEventListener('click', deleteLogisticsScenario);
 
             initFirebase(); // Startet Firebase UND ruft calculateCase() auf
             toggleManualLogistics(); // Setzt den initialen Zustand des Toggles
