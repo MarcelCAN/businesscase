@@ -245,30 +245,75 @@
                             </div>
                             
                             <h3 class="text-md font-semibold text-indigo-700 mt-4">Basis-Werte (Manuell T=0)</h3>
-                            <div class="input-group">
-                                <label for="pnl_1_order_value">Bestellwert (Brutto €)</label>
-                                <input type="number" id="pnl_1_order_value" value="1500000" min="0" step="10000" oninput="calculateCase()">
+                            
+                            <!-- KORREKTUR: Detaillierte P&L-Inputs -->
+                            <div class="space-y-4 max-h-96 overflow-y-auto pr-2">
+                                <div class="input-group">
+                                    <label for="pnl_1_order_value">Bestellwert (Brutto €)</label>
+                                    <input type="number" id="pnl_1_order_value" value="1500000" oninput="calculateCase()">
+                                </div>
+                                <div class="input-group">
+                                    <label for="pnl_kpi_return_rate">Retourenquote (%)</label>
+                                    <input type="number" id="pnl_kpi_return_rate" value="25.0" oninput="calculateCase()">
+                                </div>
+                                <div class="input-group">
+                                    <label for="pnl_kpi_cogs_rate">Wareneinsatzquote (%)</label>
+                                    <input type="number" id="pnl_kpi_cogs_rate" value="40.0" oninput="calculateCase()">
+                                </div>
+                                 <div class="input-group">
+                                    <label for="pnl_4_other_rev">Sonstige Erlöse (Netto €)</label>
+                                    <input type="number" id="pnl_4_other_rev" value="10000" oninput="calculateCase()">
+                                </div>
+                                
+                                <h4 class="text-sm font-semibold text-indigo-600 pt-2 border-t border-indigo-200">Direkte Kosten</h4>
+                                <div class="input-group">
+                                    <label for="pnl_9_sales_cost">Vertriebskosten (€)</label>
+                                    <input type="number" id="pnl_9_sales_cost" value="50000" oninput="calculateCase()">
+                                </div>
+                                <div class="input-group">
+                                    <label for="pnl_10_personnel_direct">Personalkosten (Dir. €)</label>
+                                    <input type="number" id="pnl_10_personnel_direct" value="40000" oninput="calculateCase()">
+                                </div>
+                                <div class="input-group">
+                                    <label for="pnl_11_material_cost">Sachkosten (€)</label>
+                                    <input type="number" id="pnl_11_material_cost" value="10000" oninput="calculateCase()">
+                                </div>
+                                <div class="input-group">
+                                    <label for="pnl_12_depreciation_direct">Abschreibungen (Dir. €)</label>
+                                    <input type="number" id="pnl_12_depreciation_direct" value="10000" oninput="calculateCase()">
+                                </div>
+                                <div class="input-group">
+                                    <label for="pnl_13_recharge_direct">Verrechnung (Dir. €)</label>
+                                    <input type="number" id="pnl_13_recharge_direct" value="20000" oninput="calculateCase()">
+                                </div>
+
+                                <h4 class="text-sm font-semibold text-indigo-600 pt-2 border-t border-indigo-200">Gemeinkosten</h4>
+                                <div class="input-group">
+                                    <label for="pnl_14_marketing">Zentrale Vermarktung (€)</label>
+                                    <input type="number" id="pnl_14_marketing" value="80000" oninput="calculateCase()">
+                                </div>
+                                <div class="input-group">
+                                    <label for="pnl_15_personnel_overhead">Personalkosten (Overhead €)</label>
+                                    <input type="number" id="pnl_15_personnel_overhead" value="60000" oninput="calculateCase()">
+                                </div>
+                                <div class="input-group">
+                                    <label for="pnl_16_depreciation_overhead">Abschreibungen (Overhead €)</label>
+                                    <input type="number" id="pnl_16_depreciation_overhead" value="20000" oninput="calculateCase()">
+                                </div>
+                                <div class="input-group">
+                                    <label for="pnl_17_recharge_overhead">Verrechnung (Overhead €)</label>
+                                    <input type="number" id="pnl_17_recharge_overhead" value="10000" oninput="calculateCase()">
+                                </div>
+                                <div class="input-group">
+                                    <label for="pnl_18_production">Produktion (€)</label>
+                                    <input type="number" id="pnl_18_production" value="10000" oninput="calculateCase()">
+                                </div>
+                                <div class="input-group">
+                                    <label for="pnl_19_it_admin">IT/Admin (€)</label>
+                                    <input type="number" id="pnl_19_it_admin" value="20000" oninput="calculateCase()">
+                                </div>
                             </div>
-                            <div class="input-group">
-                                <label for="pnl_kpi_return_rate">Retourenquote (%)</label>
-                                <input type="number" id="pnl_kpi_return_rate" value="25.0" min="0" max="100" step="0.1" oninput="calculateCase()">
-                            </div>
-                            <div class="input-group">
-                                <label for="pnl_kpi_cogs_rate">Wareneinsatzquote (%)</label>
-                                <input type="number" id="pnl_kpi_cogs_rate" value="40.0" min="0" max="100" step="0.1" oninput="calculateCase()">
-                            </div>
-                             <div class="input-group">
-                                <label for="pnl_4_other_rev">Sonstige Erlöse (Netto €)</label>
-                                <input type="number" id="pnl_4_other_rev" value="10000" min="0" step="100" oninput="calculateCase()">
-                            </div>
-                            <div class="input-group">
-                                <label for="pnl_9_sales_cost">Direkte Kosten-Basis (€)</label>
-                                <input type="number" id="pnl_9_sales_cost" value="130000" min="0" step="1000" oninput="calculateCase()">
-                            </div>
-                            <div class="input-group">
-                                <label for="pnl_14_marketing">Gemeinkosten-Basis (€)</label>
-                                <input type="number" id="pnl_14_marketing" value="200000" min="0" step="1000" oninput="calculateCase()">
-                            </div>
+
                         </div>
                     </div>
 
@@ -605,11 +650,12 @@
             'log_avgStorageDurationMonths', 'log_shippingCostOut', 'log_shippingCostReturnShipment'
         ];
         
-        // NEU: IDs der Basis-T=0-Inputs
+        // KORREKTUR: IDs der Basis-T=0-Inputs (jetzt detailliert)
         const BASE_INPUT_IDS = [
-            'pnl_1_order_value', 'pnl_kpi_return_rate', 'pnl_kpi_cogs_rate', 
-            'pnl_4_other_rev', 'pnl_9_sales_cost', 'pnl_14_marketing',
-            'startYear', 'pnl_kpi_vat_rate'
+            'startYear', 'pnl_kpi_vat_rate',
+            'pnl_1_order_value', 'pnl_kpi_return_rate', 'pnl_kpi_cogs_rate', 'pnl_4_other_rev',
+            'pnl_9_sales_cost', 'pnl_10_personnel_direct', 'pnl_11_material_cost', 'pnl_12_depreciation_direct', 'pnl_13_recharge_direct',
+            'pnl_14_marketing', 'pnl_15_personnel_overhead', 'pnl_16_depreciation_overhead', 'pnl_17_recharge_overhead', 'pnl_18_production', 'pnl_19_it_admin'
         ];
 
 
@@ -772,29 +818,15 @@
         function calculateCase() {
             
             // --- 1. P&L INPUTS T=0 (Basis) ---
-            const inputsT0 = {
-                pnl_1_order_value: getInputValue('pnl_1_order_value'),
-                pnl_kpi_vat_rate: getInputValue('pnl_kpi_vat_rate'),
-                pnl_kpi_return_rate: getInputValue('pnl_kpi_return_rate'),
-                pnl_kpi_avg_vk: getInputValue('log_aspBrutto'), // NEU: Liest aus Logistik-Tab
-                pnl_kpi_ipo: getInputValue('log_ipo'), // NEU: Liest aus Logistik-Tab
-                pnl_4_other_rev: getInputValue('pnl_4_other_rev'),
-                pnl_kpi_cogs_rate: getInputValue('pnl_kpi_cogs_rate'),
-                
-                // Aggregierte Kosten (für die Demo aufgesplittet)
-                pnl_9_sales_cost: getInputValue('pnl_9_sales_cost') * 0.4, 
-                pnl_10_personnel_direct: getInputValue('pnl_9_sales_cost') * 0.3,
-                pnl_11_material_cost: getInputValue('pnl_9_sales_cost') * 0.1, 
-                pnl_12_depreciation_direct: getInputValue('pnl_9_sales_cost') * 0.1, 
-                pnl_13_recharge_direct: getInputValue('pnl_9_sales_cost') * 0.1, 
+            // KORREKTUR: Liest jetzt alle detaillierten Inputs
+            const inputsT0 = {};
+            BASE_INPUT_IDS.forEach(id => {
+                inputsT0[id] = getInputValue(id);
+            });
+            // Füge die restlichen KPIs hinzu, die aus dem Logistik-Tab stammen
+            inputsT0.pnl_kpi_avg_vk = getInputValue('log_aspBrutto');
+            inputsT0.pnl_kpi_ipo = getInputValue('log_ipo');
 
-                pnl_14_marketing: getInputValue('pnl_14_marketing') * 0.4, 
-                pnl_15_personnel_overhead: getInputValue('pnl_14_marketing') * 0.3, 
-                pnl_16_depreciation_overhead: getInputValue('pnl_14_marketing') * 0.1, 
-                pnl_17_recharge_overhead: getInputValue('pnl_14_marketing') * 0.1, 
-                pnl_18_production: getInputValue('pnl_14_marketing') * 0.05, 
-                pnl_19_it_admin: getInputValue('pnl_14_marketing') * 0.05,
-            };
             
             // --- 2. BASIS LOGISTIK KOSTEN (NEU: Dynamisch aus Logistik-Tab) ---
             const baseLogisticsCosts = {
@@ -1191,35 +1223,24 @@
                 createdAt: new Date().toISOString(),
                 userId: userId,
                 // T=0 Basis-Inputs
-                baseInputs: {
-                    pnl_1_order_value: getInputValue('pnl_1_order_value'),
-                    pnl_kpi_return_rate: getInputValue('pnl_kpi_return_rate'),
-                    pnl_kpi_cogs_rate: getInputValue('pnl_kpi_cogs_rate'),
-                    pnl_4_other_rev: getInputValue('pnl_4_other_rev'),
-                    pnl_9_sales_cost: getInputValue('pnl_9_sales_cost'),
-                    pnl_14_marketing: getInputValue('pnl_14_marketing'),
-                    pnl_kpi_vat_rate: getInputValue('pnl_kpi_vat_rate'),
-                    startYear: getInputValue('startYear'),
-                },
+                baseInputs: {},
                 // NEU: Logistik-Inputs
-                logisticsInputs: {
-                    log_aspBrutto: getInputValue('log_aspBrutto'),
-                    log_ipo: getInputValue('log_ipo'),
-                    log_ipr: getInputValue('log_ipr'),
-                    log_goodsReceiptCostPerItem: getInputValue('log_goodsReceiptCostPerItem'),
-                    log_orderProcessingCostPerOrder: getInputValue('log_orderProcessingCostPerOrder'),
-                    log_pickPackCostPerItem: getInputValue('log_pickPackCostPerItem'),
-                    log_returnProcessingCostPerItem: getInputValue('log_returnProcessingCostPerItem'),
-                    log_storageCostPerItemPerMonth: getInputValue('log_storageCostPerItemPerMonth'),
-                    log_avgStorageDurationMonths: getInputValue('log_avgStorageDurationMonths'),
-                    log_shippingCostOut: getInputValue('log_shippingCostOut'),
-                    log_shippingCostReturnShipment: getInputValue('log_shippingCostReturnShipment'),
-                },
+                logisticsInputs: {},
                 // Die Rohdaten der Excel-Datei
                 importedProjects: importedProjects,
                 // Alle Anpassungen, die in den Projekt-Matrizen vorgenommen wurden
                 projectInputValues: projectInputValues 
             };
+            
+            // Fülle baseInputs
+            BASE_INPUT_IDS.forEach(id => {
+                scenarioData.baseInputs[id] = getInputValue(id);
+            });
+            // Fülle logisticsInputs
+            LOGISTICS_INPUT_IDS.forEach(id => {
+                scenarioData.logisticsInputs[id] = getInputValue(id);
+            });
+
 
             try {
                 // KORREKTUR: Speichert in 'business_cases' Kollektion
