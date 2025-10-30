@@ -42,15 +42,14 @@
         .grid-cols-pnl {
             /* 1 fixe Spalte + 6 Jahre (T0-T5) * 2 Spalten (Euro + %) = 13 Spalten */
             grid-template-columns: minmax(240px, 1fr) repeat(12, minmax(110px, 1fr));
-            min-width: 1600px; /* Reduziert von 1800px */
+            min-width: 1600px;
         }
         .grid-cols-kpi {
             /* 1 fixe Spalte + 6 Jahre (T0-T5) * 1 Spalte (Wert) = 7 Spalten */
             grid-template-columns: minmax(240px, 1fr) repeat(6, minmax(110px, 1fr));
-            min-width: 900px; /* Reduziert */
+            min-width: 900px;
         }
         
-        /* NEUE KLASSE FÜR PROJEKT-IMPORT-TABELLE */
         .grid-cols-kpi-input-projects {
             /* 1 fixe Spalte (Projekt) + 1 fixe Spalte (Wirkung) + 5 Jahre (T1-T5) = 7 Spalten */
             grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) repeat(5, minmax(90px, 1fr));
@@ -93,8 +92,8 @@
             background-color: #f3f4f6;
         }
         
-        .pnl-subtotal > div { background-color: #eff6ff; font-weight: 700; } /* Blau für DBs */
-        .pnl-final > div { background-color: #e0e7ff; font-weight: 800; } /* Dunkleres Blau für Ergebnis */
+        .pnl-subtotal { background-color: #eff6ff; font-weight: 700; } /* Blau für DBs */
+        .pnl-final { background-color: #e0e7ff; font-weight: 800; } /* Dunkleres Blau für Ergebnis */
         .pnl-header-row { background-color: #e5e7eb; grid-column: 1 / -1; font-weight: 700; } /* Grau für Sektions-Header */
         .pnl-percent { color: #6b7280; font-size: 0.75rem; } /* %-Werte */
         .kpi-row { background-color: #fdfdff; }
@@ -141,6 +140,28 @@
         .load-dropdown select {
             flex-grow: 1;
         }
+        /* Styling für Logistik-Inputs */
+        .logistics-input-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+        .input-group {
+             display: flex;
+             flex-direction: column;
+        }
+        .input-group label {
+            font-size: 0.75rem; /* 12px */
+            font-weight: 500;
+            color: #374151; /* gray-700 */
+            margin-bottom: 0.25rem;
+        }
+        .input-group input {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #d1d5db; /* gray-300 */
+            border-radius: 0.375rem; /* rounded-md */
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
+        }
 
     </style>
 </head>
@@ -169,24 +190,6 @@
                             Speichern
                         </button>
                     </div>
-                    
-                    <!-- NEU: Business Case Laden -->
-                    <div class="load-dropdown">
-                         <select id="caseSelector" class="block w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
-                            <option value="">--- Business Case laden ---</option>
-                        </select>
-                        <div id="caseSpinner" class="hidden spinner"></div>
-                    </div>
-
-                    <!-- Logistik Szenario Laden -->
-                    <div class="load-dropdown">
-                         <select id="scenarioSelector" onchange="loadScenarioData(this.value)" class="block w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
-                            <option value="">--- Logistik-Szenario laden ---</option>
-                        </select>
-                        <div id="scenarioSpinner" class="hidden spinner"></div>
-                    </div>
-                    
-                    <div id="scenarioStatus" class="text-xs text-gray-500 text-right w-full"></div>
                 </div>
 
             </div>
@@ -197,6 +200,7 @@
             <nav class="-mb-px flex space-x-8" aria-label="Tabs">
                 <button id="tab-pnl" onclick="showTab('pnl')" class="tab-button active">P&L & KPIs</button>
                 <button id="tab-projects" onclick="showTab('projects')" class="tab-button inactive">Projekt-Steuerung</button>
+                <button id="tab-logistics" onclick="showTab('logistics')" class="tab-button inactive">Logistik-Parameter</button>
             </nav>
         </div>
 
@@ -212,38 +216,38 @@
                         <div class="p-4 bg-indigo-50 rounded-lg shadow-inner space-y-4">
                             <h2 class="text-xl font-bold text-indigo-700">1. Basis & Zeitachse (T=0)</h2>
                             <div class="input-group">
-                                <label for="startYear" class="block text-sm font-medium text-gray-700">Start-Jahr (T=0)</label>
-                                <input type="number" id="startYear" value="2024" min="2000" max="2100" step="1" oninput="calculateCase()" class="mt-1 w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
+                                <label for="startYear">Start-Jahr (T=0)</label>
+                                <input type="number" id="startYear" value="2024" min="2000" max="2100" step="1" oninput="calculateCase()">
                             </div>
                             <div class="input-group">
-                                <label for="pnl_kpi_vat_rate" class="block text-sm font-medium text-gray-700">Mehrwertsteuersatz (MwSt. %)</label>
-                                <input type="number" id="pnl_kpi_vat_rate" value="19.0" min="0" max="100" step="0.1" oninput="calculateCase()" class="mt-1 w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
+                                <label for="pnl_kpi_vat_rate">Mehrwertsteuersatz (MwSt. %)</label>
+                                <input type="number" id="pnl_kpi_vat_rate" value="19.0" min="0" max="100" step="0.1" oninput="calculateCase()">
                             </div>
                             <!-- Aggregierte Eingaben für T=0 (werden im Code aufgesplittet) -->
                             <h3 class="text-md font-semibold text-indigo-700 mt-4">Basis-Werte (Aggregiert T=0)</h3>
                             <div class="input-group">
-                                <label for="pnl_1_order_value" class="block text-sm font-medium text-gray-700">Bestellwert (Brutto €)</label>
-                                <input type="number" id="pnl_1_order_value" value="1500000" min="0" step="10000" oninput="calculateCase()" class="mt-1 w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
+                                <label for="pnl_1_order_value">Bestellwert (Brutto €)</label>
+                                <input type="number" id="pnl_1_order_value" value="1500000" min="0" step="10000" oninput="calculateCase()">
                             </div>
                             <div class="input-group">
-                                <label for="pnl_kpi_return_rate" class="block text-sm font-medium text-gray-700">Retourenquote (%)</label>
-                                <input type="number" id="pnl_kpi_return_rate" value="25.0" min="0" max="100" step="0.1" oninput="calculateCase()" class="mt-1 w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
+                                <label for="pnl_kpi_return_rate">Retourenquote (%)</label>
+                                <input type="number" id="pnl_kpi_return_rate" value="25.0" min="0" max="100" step="0.1" oninput="calculateCase()">
                             </div>
                             <div class="input-group">
-                                <label for="pnl_kpi_cogs_rate" class="block text-sm font-medium text-gray-700">Wareneinsatzquote (%)</label>
-                                <input type="number" id="pnl_kpi_cogs_rate" value="40.0" min="0" max="100" step="0.1" oninput="calculateCase()" class="mt-1 w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
+                                <label for="pnl_kpi_cogs_rate">Wareneinsatzquote (%)</label>
+                                <input type="number" id="pnl_kpi_cogs_rate" value="40.0" min="0" max="100" step="0.1" oninput="calculateCase()">
                             </div>
                              <div class="input-group">
-                                <label for="pnl_4_other_rev" class="block text-sm font-medium text-gray-700">Sonstige Erlöse (Netto €)</label>
-                                <input type="number" id="pnl_4_other_rev" value="10000" min="0" step="100" oninput="calculateCase()" class="mt-1 w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
+                                <label for="pnl_4_other_rev">Sonstige Erlöse (Netto €)</label>
+                                <input type="number" id="pnl_4_other_rev" value="10000" min="0" step="100" oninput="calculateCase()">
                             </div>
                             <div class="input-group">
-                                <label for="pnl_9_sales_cost" class="block text-sm font-medium text-gray-700">Direkte Kosten-Basis (€)</label>
-                                <input type="number" id="pnl_9_sales_cost" value="130000" min="0" step="1000" oninput="calculateCase()" class="mt-1 w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
+                                <label for="pnl_9_sales_cost">Direkte Kosten-Basis (€)</label>
+                                <input type="number" id="pnl_9_sales_cost" value="130000" min="0" step="1000" oninput="calculateCase()">
                             </div>
                             <div class="input-group">
-                                <label for="pnl_14_marketing" class="block text-sm font-medium text-gray-700">Gemeinkosten-Basis (€)</label>
-                                <input type="number" id="pnl_14_marketing" value="200000" min="0" step="1000" oninput="calculateCase()" class="mt-1 w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
+                                <label for="pnl_14_marketing">Gemeinkosten-Basis (€)</label>
+                                <input type="number" id="pnl_14_marketing" value="200000" min="0" step="1000" oninput="calculateCase()">
                             </div>
                         </div>
                     </div>
@@ -304,6 +308,94 @@
                     </div>
                 </div>
             </div>
+
+            <!-- NEU: Tab 3: Logistik-Parameter (Standard verborgen) -->
+            <div id="pane-logistics" class="hidden">
+                <div class="max-w-6xl mx-auto space-y-8">
+                    <div class="p-6 bg-blue-50 rounded-lg shadow-inner border border-blue-300 space-y-4">
+                        <h2 class="text-2xl font-bold text-blue-700 mb-4">Logistik-Parameter (T=0 Basis)</h2>
+                        <p class="text-sm text-gray-600 mb-6">
+                            Dies sind die T=0 Basis-Parameter für die Logistikkosten-Berechnung. 
+                            Sie können ein gespeichertes "Logistik-Szenario" (aus dem E-Com-Tool) laden, um diese Felder zu füllen.
+                        </p>
+
+                        <!-- Lade-Dropdowns (Hierher verschoben) -->
+                        <div class="flex flex-col md:flex-row gap-4 mb-6">
+                            <!-- Business Case Laden -->
+                            <div class="flex-1 p-4 border rounded-lg bg-white">
+                                <label for="caseSelector" class="block text-sm font-medium text-gray-700 mb-1">1. Business Case laden (Gesamtes Tool)</label>
+                                <div class="load-dropdown">
+                                     <select id="caseSelector" class="block w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
+                                        <option value="">--- Business Case laden ---</option>
+                                    </select>
+                                    <div id="caseSpinner" class="hidden spinner"></div>
+                                </div>
+                            </div>
+                            <!-- Logistik Szenario Laden -->
+                            <div class="flex-1 p-4 border rounded-lg bg-white">
+                                <label for="scenarioSelector" class="block text-sm font-medium text-gray-700 mb-1">2. Logistik-Szenario laden (Nur T=0 Logistik)</label>
+                                <div class="load-dropdown">
+                                     <select id="scenarioSelector" onchange="loadScenarioData(this.value)" class="block w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
+                                        <option value="">--- Logistik-Szenario laden ---</option>
+                                    </select>
+                                    <div id="scenarioSpinner" class="hidden spinner"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 11 Logistik-Input-Felder -->
+                        <div class="logistics-input-grid">
+                            <div class="input-group">
+                                <label for="log_aspBrutto">Durchschnitts-VK (Brutto €)</label>
+                                <input type="number" id="log_aspBrutto" value="65.0" step="0.1" oninput="calculateCase()">
+                            </div>
+                            <div class="input-group">
+                                <label for="log_ipo">Artikel / Bestellung (IPO)</label>
+                                <input type="number" id="log_ipo" value="1.2" step="0.1" oninput="calculateCase()">
+                            </div>
+                            <div class="input-group">
+                                <label for="log_ipr">Artikel / Retourensendung (IPR)</label>
+                                <input type="number" id="log_ipr" value="1.1" step="0.1" oninput="calculateCase()">
+                            </div>
+
+                            <div class="input-group">
+                                <label for="log_goodsReceiptCostPerItem">Warenannahme (pro Artikel €)</label>
+                                <input type="number" id="log_goodsReceiptCostPerItem" value="0.50" step="0.01" oninput="calculateCase()">
+                            </div>
+                            <div class="input-group">
+                                <label for="log_orderProcessingCostPerOrder">Auftragsverarbeitung (pro Bestellung €)</label>
+                                <input type="number" id="log_orderProcessingCostPerOrder" value="1.50" step="0.01" oninput="calculateCase()">
+                            </div>
+                            <div class="input-group">
+                                <label for="log_pickPackCostPerItem">Pick & Pack (pro Artikel €)</label>
+                                <input type="number" id="log_pickPackCostPerItem" value="1.10" step="0.01" oninput="calculateCase()">
+                            </div>
+                            <div class="input-group">
+                                <label for="log_returnProcessingCostPerItem">Retouren-Aufbereitung (pro Artikel €)</label>
+                                <input type="number" id="log_returnProcessingCostPerItem" value="2.50" step="0.01" oninput="calculateCase()">
+                            </div>
+                            
+                            <div class="input-group">
+                                <label for="log_storageCostPerItemPerMonth">Lagerung (pro Artikel / Monat €)</label>
+                                <input type="number" id="log_storageCostPerItemPerMonth" value="0.10" step="0.01" oninput="calculateCase()">
+                            </div>
+                            <div class="input-group">
+                                <label for="log_avgStorageDurationMonths">Durchschn. Lagerdauer (Monate)</label>
+                                <input type="number" id="log_avgStorageDurationMonths" value="3.0" step="0.1" oninput="calculateCase()">
+                            </div>
+
+                            <div class="input-group">
+                                <label for="log_shippingCostOut">Versandkosten (Outbound €)</label>
+                                <input type="number" id="log_shippingCostOut" value="4.99" step="0.01" oninput="calculateCase()">
+                            </div>
+                            <div class="input-group">
+                                <label for="log_shippingCostReturnShipment">Versandkosten (Retoure €)</label>
+                                <input type="number" id="log_shippingCostReturnShipment" value="5.99" step="0.01" oninput="calculateCase()">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
     </div>
@@ -324,7 +416,7 @@
         const LOGISTICS_SCENARIOS_COLLECTION = 'scenarios'; // Für E-Com Controller Tool (LESEN)
         const BUSINESS_CASES_COLLECTION = 'business_cases'; // Für dieses Tool (LESEN/SCHREIBEN)
 
-        let loadedScenarioData = null; 
+        let loadedLogisticsScenarioData = null; // Hält nur geladene Logistik-Daten
         let importedProjects = []; 
         let projectInputValues = {}; // NEU: Speichert Projekt-Input-Anpassungen
         const PLANNING_HORIZON = 5; // T+1 bis T+5 (REDUZIERT)
@@ -345,19 +437,33 @@
             const element = document.getElementById(id);
             return parseFloat(element?.value) || 0;
         };
+        
+        /**
+         * Hilfsfunktion zum sicheren Setzen von Input-Werten.
+         */
+        const setInputValue = (id, value) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.value = value || 0;
+            }
+        };
 
         /**
          * NEU: Tab-Wechsel-Logik
          */
         function showTab(tabName) {
             document.getElementById('pane-pnl').classList.toggle('hidden', tabName !== 'pnl');
-            document.getElementById('pane-projects').classList.toggle('hidden', tabName === 'pnl');
+            document.getElementById('pane-projects').classList.toggle('hidden', tabName !== 'projects');
+            document.getElementById('pane-logistics').classList.toggle('hidden', tabName !== 'logistics');
             
             document.getElementById('tab-pnl').classList.toggle('active', tabName === 'pnl');
             document.getElementById('tab-pnl').classList.toggle('inactive', tabName !== 'pnl');
             
             document.getElementById('tab-projects').classList.toggle('active', tabName === 'projects');
             document.getElementById('tab-projects').classList.toggle('inactive', tabName !== 'projects');
+            
+            document.getElementById('tab-logistics').classList.toggle('active', tabName === 'logistics');
+            document.getElementById('tab-logistics').classList.toggle('inactive', tabName !== 'logistics');
         }
         
         // =================================================================
@@ -469,6 +575,14 @@
             { id: 'personnelCostReduction', label: 'Personal-Kosten-Senkung (%)', valueT1: 0.0 },
             { id: 'marketingCostReduction', label: 'Marketingkosten-Senkung (%)', valueT1: 0.0 },
             { id: 'rechargeCostReduction', label: 'Verrechnungskosten-Senkung (%)', valueT1: 0.0 }
+        ];
+        
+        // NEU: IDs der Logistik-Inputs
+        const LOGISTICS_INPUT_IDS = [
+            'log_aspBrutto', 'log_ipo', 'log_ipr', 'log_goodsReceiptCostPerItem', 
+            'log_orderProcessingCostPerOrder', 'log_pickPackCostPerItem', 
+            'log_returnProcessingCostPerItem', 'log_storageCostPerItemPerMonth', 
+            'log_avgStorageDurationMonths', 'log_shippingCostOut', 'log_shippingCostReturnShipment'
         ];
 
         // =================================================================
@@ -634,8 +748,8 @@
                 pnl_1_order_value: getInputValue('pnl_1_order_value'),
                 pnl_kpi_vat_rate: getInputValue('pnl_kpi_vat_rate'),
                 pnl_kpi_return_rate: getInputValue('pnl_kpi_return_rate'),
-                pnl_kpi_avg_vk: 65, // Basis VK Brutto (wird von Logik benötigt)
-                pnl_kpi_ipo: 1.2, // Basis IPO (wird von Logik benötigt)
+                pnl_kpi_avg_vk: getInputValue('log_aspBrutto'), // NEU: Liest aus Logistik-Tab
+                pnl_kpi_ipo: getInputValue('log_ipo'), // NEU: Liest aus Logistik-Tab
                 pnl_4_other_rev: getInputValue('pnl_4_other_rev'),
                 pnl_kpi_cogs_rate: getInputValue('pnl_kpi_cogs_rate'),
                 
@@ -654,13 +768,20 @@
                 pnl_19_it_admin: getInputValue('pnl_14_marketing') * 0.05,
             };
             
-            // --- 2. BASIS LOGISTIK KOSTEN (als Fallback) ---
+            // --- 2. BASIS LOGISTIK KOSTEN (NEU: Dynamisch aus Logistik-Tab) ---
             const baseLogisticsCosts = {
                 vatRate: inputsT0.pnl_kpi_vat_rate, 
-                avgVKBrutto: inputsT0.pnl_kpi_avg_vk, ipo: inputsT0.pnl_kpi_ipo, ipr: 1.2, 
-                shippingCostOut: 4.99, shippingCostReturnShipment: 5.99,
-                orderProcessingCostPerOrder: 1.50, pickPackCostPerItem: 1.10, goodsReceiptCostPerItem: 0.50,
-                returnProcessingCostPerItem: 2.50, storageCostPerItemPerMonth: 0.10, avgStorageDurationMonths: 3.0,
+                avgVKBrutto: inputsT0.pnl_kpi_avg_vk, 
+                ipo: inputsT0.pnl_kpi_ipo, 
+                ipr: getInputValue('log_ipr'), 
+                shippingCostOut: getInputValue('log_shippingCostOut'), 
+                shippingCostReturnShipment: getInputValue('log_shippingCostReturnShipment'),
+                orderProcessingCostPerOrder: getInputValue('log_orderProcessingCostPerOrder'), 
+                pickPackCostPerItem: getInputValue('log_pickPackCostPerItem'), 
+                goodsReceiptCostPerItem: getInputValue('log_goodsReceiptCostPerItem'),
+                returnProcessingCostPerItem: getInputValue('log_returnProcessingCostPerItem'), 
+                storageCostPerItemPerMonth: getInputValue('log_storageCostPerItemPerMonth'), 
+                avgStorageDurationMonths: getInputValue('log_avgStorageDurationMonths'),
             };
             
             // --- 3. AGGREGIERTE PROJEKT-EFFEKTE (NEU) ---
@@ -723,21 +844,17 @@
                 currentKPIs.marketingCostReduction = currentKPIs.marketingCostReduction + aggregatedEffects.marketingCostReduction[t];
                 currentKPIs.rechargeCostReduction = currentKPIs.rechargeCostReduction + aggregatedEffects.rechargeCostReduction[t];
 
-                // 5.2. Logistik-Szenario anwenden (falls geladen) - überschreibt nur die Logistik-Konditionen
-                if (loadedScenarioData) {
-                    logisticsCostsT.shippingCostOut = parseFloat(loadedScenarioData.shippingCostOut) || logisticsCostsT.shippingCostOut;
-                    logisticsCostsT.shippingCostReturnShipment = parseFloat(loadedScenarioData.shippingCostReturnShipment) || logisticsCostsT.shippingCostReturnShipment;
-                    logisticsCostsT.orderProcessingCostPerOrder = parseFloat(loadedScenarioData.orderProcessingCostPerOrder) || logisticsCostsT.orderProcessingCostPerOrder;
-                    logisticsCostsT.pickPackCostPerItem = parseFloat(loadedScenarioData.pickPackCostPerItem) || logisticsCostsT.pickPackCostPerItem;
-                    logisticsCostsT.goodsReceiptCostPerItem = parseFloat(loadedScenarioData.goodsReceiptCostPerItem) || logisticsCostsT.goodsReceiptCostPerItem;
-                    logisticsCostsT.returnProcessingCostPerItem = parseFloat(loadedScenarioData.returnProcessingCostPerItem) || logisticsCostsT.returnProcessingCostPerItem;
-                    logisticsCostsT.storageCostPerItemPerMonth = parseFloat(loadedScenarioData.storageCostPerItemPerMonth) || logisticsCostsT.storageCostPerItemPerMonth;
-                    logisticsCostsT.avgStorageDurationMonths = parseFloat(loadedScenarioData.avgStorageDurationMonths) || logisticsCostsT.avgStorageDurationMonths;
+                // 5.2. Logistik-Szenario anwenden (falls geladen) 
+                // KORREKTUR: Überschreibt jetzt die T=0-Logistik-Basis für dieses Jahr
+                if (loadedLogisticsScenarioData) {
+                    logisticsCostsT.shippingCostOut = parseFloat(loadedLogisticsScenarioData.shippingCostOut) || logisticsCostsT.shippingCostOut;
+                    logisticsCostsT.shippingCostReturnShipment = parseFloat(loadedLogisticsScenarioData.shippingCostReturnShipment) || logisticsCostsT.shippingCostReturnShipment;
+                    // ... (alle anderen 11 Logistik-Parameter) ...
                     
                     // Überschreibe auch die Basis-KPIs aus dem Szenario (falls vorhanden)
-                    currentKPIs.avgVKBrutto = parseFloat(loadedScenarioData.avgVKBrutto) || currentKPIs.avgVKBrutto;
-                    currentKPIs.itemsPerOrder = parseFloat(loadedScenarioData.ipo) || currentKPIs.itemsPerOrder;
-                    currentKPIs.returnRate = parseFloat(loadedScenarioData.returnRate) || currentKPIs.returnRate;
+                    currentKPIs.avgVKBrutto = parseFloat(loadedLogisticsScenarioData.avgVKBrutto) || currentKPIs.avgVKBrutto;
+                    currentKPIs.itemsPerOrder = parseFloat(loadedLogisticsScenarioData.ipo) || currentKPIs.itemsPerOrder;
+                    currentKPIs.returnRate = parseFloat(loadedLogisticsScenarioData.returnRate) || currentKPIs.returnRate;
                 }
                 
                 // Die aktuellen KPIs werden in die Logistikkosten-Struktur für die Berechnung übernommen
@@ -771,33 +888,38 @@
             const container = document.getElementById('projectEffectsContainer');
             if (!container) return;
             
-            // Erstelle ein einziges großes Grid
-            let html = `<div class="table-container kpi-input-grid grid-cols-kpi-input-projects">`;
-
-            // Header für diese Projekt-Matrix
-            html += `
-                <div class="grid-cell grid-header grid-sticky-col" style="left: 0px;">Projektname</div>
-                <div class="grid-cell grid-header grid-sticky-col" style="left: 220px; z-index: 11;">Wirkung (KPI)</div> <!-- Zweite sticky Spalte -->
-                <div class="grid-cell grid-header text-right">T+1</div>
-                <div class="grid-cell grid-header text-right">T+2</div>
-                <div class="grid-cell grid-header text-right">T+3</div>
-                <div class="grid-cell grid-header text-right">T+4</div>
-                <div class="grid-cell grid-header text-right">T+5</div>
-            `;
-
-            // Iteriere über alle Projekte UND dann über alle Effekte
+            container.innerHTML = ''; // Leere den Platzhalter
+            
             projects.forEach((project, index) => {
                 const projectName = project.Projektname || `Projekt ${index + 1}`; // KORREKTUR RÜCKGÄNGIG: "Projektname"
                 
+                let projectHtml = `
+                    <div class="p-4 bg-white rounded-lg shadow-md border border-gray-200">
+                        <h3 class="text-xl font-bold text-indigo-600 mb-3">${projectName}</h3>
+                        <div class="table-container kpi-input-grid grid-cols-kpi-input-projects">
+                `;
+
+                // Header für diese Projekt-Matrix
+                projectHtml += `
+                    <div class="grid-cell grid-header grid-sticky-col" style="left: 0px;">Projektname</div>
+                    <div class="grid-cell grid-header grid-sticky-col" style="left: 220px; z-index: 11;">Wirkung (KPI)</div> <!-- Zweite sticky Spalte -->
+                    <div class="grid-cell grid-header text-right">T+1</div>
+                    <div class="grid-cell grid-header text-right">T+2</div>
+                    <div class="grid-cell grid-header text-right">T+3</div>
+                    <div class="grid-cell grid-header text-right">T+4</div>
+                    <div class="grid-cell grid-header text-right">T+5</div>
+                `;
+
+                // Iteriere über alle Projekte UND dann über alle Effekte
                 KPI_INPUT_EFFECTS.forEach((effect, effectIndex) => {
                     
                     // Erste Spalte: Projektname (nur bei der ersten Effekt-Zeile anzeigen und über alle Effekt-Zeilen spannen)
                     if (effectIndex === 0) {
-                        html += `<div class="grid-cell grid-sticky-col" style="left: 0px; grid-row: span ${KPI_INPUT_EFFECTS.length}; align-self: center; background-color: #f9fafb;">${projectName}</div>`;
+                        projectHtml += `<div class="grid-cell grid-sticky-col" style="left: 0px; grid-row: span ${KPI_INPUT_EFFECTS.length}; align-self: center; background-color: #f9fafb;">${projectName}</div>`;
                     }
 
                     // Zweite Spalte: Effekt-Label
-                    html += `<div class="grid-cell grid-sticky-col" style="left: 220px; z-index: 11; background-color: #fefce8;">${effect.label}</div>`;
+                    projectHtml += `<div class="grid-cell grid-sticky-col" style="left: 220px; z-index: 11; background-color: #fefce8;">${effect.label}</div>`;
 
                     // Jahres-Inputfelder
                     for (let t = 1; t <= PLANNING_HORIZON; t++) {
@@ -816,15 +938,15 @@
                         // Speichere den Initialwert im globalen Objekt
                         projectInputValues[inputId] = value;
 
-                        html += `<div class="grid-cell">
+                        projectHtml += `<div class="grid-cell">
                                     <input type="number" id="${inputId}" value="${value.toFixed(1)}" step="0.1" oninput="updateProjectInputValue('${inputId}', this.value)">
                                  </div>`;
                     }
                 });
+                
+                projectHtml += `</div></div>`; // Ende der Projekt-Matrix
+                container.innerHTML += projectHtml;
             });
-            
-            html += `</div>`; // Ende des Grids
-            container.innerHTML = html; // Setze das gesamte HTML
         }
 
         // NEU: Funktion zum Speichern von Projekt-Input-Änderungen
@@ -1023,6 +1145,20 @@
                     pnl_14_marketing: getInputValue('pnl_14_marketing'),
                     pnl_kpi_vat_rate: getInputValue('pnl_kpi_vat_rate'),
                 },
+                // NEU: Logistik-Inputs
+                logisticsInputs: {
+                    log_aspBrutto: getInputValue('log_aspBrutto'),
+                    log_ipo: getInputValue('log_ipo'),
+                    log_ipr: getInputValue('log_ipr'),
+                    log_goodsReceiptCostPerItem: getInputValue('log_goodsReceiptCostPerItem'),
+                    log_orderProcessingCostPerOrder: getInputValue('log_orderProcessingCostPerOrder'),
+                    log_pickPackCostPerItem: getInputValue('log_pickPackCostPerItem'),
+                    log_returnProcessingCostPerItem: getInputValue('log_returnProcessingCostPerItem'),
+                    log_storageCostPerItemPerMonth: getInputValue('log_storageCostPerItemPerMonth'),
+                    log_avgStorageDurationMonths: getInputValue('log_avgStorageDurationMonths'),
+                    log_shippingCostOut: getInputValue('log_shippingCostOut'),
+                    log_shippingCostReturnShipment: getInputValue('log_shippingCostReturnShipment'),
+                },
                 // Die Rohdaten der Excel-Datei
                 importedProjects: importedProjects,
                 // Alle Anpassungen, die in den Projekt-Matrizen vorgenommen wurden
@@ -1110,7 +1246,7 @@
         // Ein spezifisches Logistik-Szenario laden
         async function loadScenarioData(docId) {
             if (!db || !docId) {
-                loadedScenarioData = null;
+                loadedLogisticsScenarioData = null;
                 document.getElementById('scenarioStatus').textContent = 'Kein Logistik-Szenario geladen.';
                 calculateCase();
                 return;
@@ -1123,17 +1259,33 @@
                 const docSnap = await getDoc(docRef);
 
                 if (docSnap.exists()) {
-                    loadedScenarioData = docSnap.data();
-                    document.getElementById('scenarioStatus').textContent = `Logistik-Szenario "${loadedScenarioData.scenarioName}" geladen.`;
+                    const data = docSnap.data();
+                    loadedLogisticsScenarioData = data;
+                    document.getElementById('scenarioStatus').textContent = `Logistik-Szenario "${data.scenarioName}" geladen.`;
+
+                    // NEU: Setze die T=0 Logistik-Inputs mit den geladenen Daten
+                    // (Mapping von alten E-Com-Tool-Namen zu neuen IDs)
+                    setInputValue('log_aspBrutto', data.aspBrutto);
+                    setInputValue('log_ipo', data.ipo);
+                    setInputValue('log_ipr', data.ipr);
+                    setInputValue('log_goodsReceiptCostPerItem', data.goodsReceiptCostPerItem);
+                    setInputValue('log_orderProcessingCostPerOrder', data.orderProcessingCostPerOrder);
+                    setInputValue('log_pickPackCostPerItem', data.pickPackCostPerItem);
+                    setInputValue('log_returnProcessingCostPerItem', data.returnProcessingCostPerItem);
+                    setInputValue('log_storageCostPerItemPerMonth', data.storageCostPerItemPerMonth);
+                    setInputValue('log_avgStorageDurationMonths', data.avgStorageDurationMonths);
+                    setInputValue('log_shippingCostOut', data.shippingCostOut);
+                    setInputValue('log_shippingCostReturnShipment', data.shippingCostReturnShipment);
+
                     calculateCase(); // Neuberechnung mit den Daten des Szenarios
                 } else {
                     document.getElementById('scenarioStatus').textContent = 'Fehler: Szenario nicht gefunden.';
-                    loadedScenarioData = null;
+                    loadedLogisticsScenarioData = null;
                 }
             } catch (error) {
                  console.error("Fehler beim Laden des Logistik-Szenarios: ", error);
                  document.getElementById('scenarioStatus').textContent = 'Fehler beim Laden.';
-                 loadedScenarioData = null;
+                 loadedLogisticsScenarioData = null;
             } finally {
                 document.getElementById('scenarioSpinner').classList.add('hidden');
             }
@@ -1158,18 +1310,23 @@
                     // 1. Lade T=0 Basis-Inputs
                     const inputs = data.baseInputs || {};
                     Object.keys(inputs).forEach(key => {
-                        const el = document.getElementById(key);
-                        if (el) el.value = inputs[key];
+                        setInputValue(key, inputs[key]);
                     });
                     
-                    // 2. Lade Projekt-Daten
+                    // 2. Lade Logistik-Inputs
+                    const logInputs = data.logisticsInputs || {};
+                    Object.keys(logInputs).forEach(key => {
+                         setInputValue(key, logInputs[key]);
+                    });
+
+                    // 3. Lade Projekt-Daten
                     importedProjects = data.importedProjects || [];
                     projectInputValues = data.projectInputValues || {};
                     
-                    // 3. Rendere die Projekt-Inputs mit den geladenen Werten
+                    // 4. Rendere die Projekt-Inputs mit den geladenen Werten
                     renderProjectInputs(importedProjects, projectInputValues);
                     
-                    // 4. Setze den Namen
+                    // 5. Setze den Namen
                     document.getElementById('scenarioNameInput').value = data.scenarioName || '';
                     document.getElementById('scenarioStatus').textContent = `Business Case "${data.scenarioName}" geladen.`;
                     
