@@ -112,9 +112,10 @@
 
         /* Tab-Stile */
         .tab-button {
-            padding: 1rem 0.25rem;
+            padding: 0.5rem 1rem; /* Kompaktere Tabs */
             border-bottom-width: 2px;
-            font-medium: 0.875rem;
+            font-size: 0.875rem; /* 14px */
+            font-weight: 600;
             white-space: nowrap;
         }
         .tab-button.active {
@@ -129,7 +130,17 @@
             border-color: #d1d5db; /* gray-300 */
             color: #374151; /* gray-700 */
         }
-
+        /* Style für Lade-Dropdowns */
+        .load-dropdown {
+            margin-top: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            width: 100%;
+        }
+        .load-dropdown select {
+            flex-grow: 1;
+        }
 
     </style>
 </head>
@@ -151,18 +162,30 @@
                 
                 <!-- Speichern/Laden Sektion -->
                 <div class="mt-4 flex flex-col md:items-end space-y-2">
+                    <!-- Business Case Speichern -->
                     <div class="flex items-center space-x-2 w-full">
                         <input type="text" id="scenarioNameInput" placeholder="Business Case Name" class="w-full md:w-auto rounded-lg border-gray-300 shadow-sm p-2 border-2">
                         <button id="saveScenarioBtn" class="bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:bg-indigo-700 transition-colors">
                             Speichern
                         </button>
                     </div>
-                    <div class="flex items-center space-x-2 w-full">
+                    
+                    <!-- NEU: Business Case Laden -->
+                    <div class="load-dropdown">
+                         <select id="caseSelector" class="block w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
+                            <option value="">--- Business Case laden ---</option>
+                        </select>
+                        <div id="caseSpinner" class="hidden spinner"></div>
+                    </div>
+
+                    <!-- Logistik Szenario Laden -->
+                    <div class="load-dropdown">
                          <select id="scenarioSelector" onchange="loadScenarioData(this.value)" class="block w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
                             <option value="">--- Logistik-Szenario laden ---</option>
                         </select>
                         <div id="scenarioSpinner" class="hidden spinner"></div>
                     </div>
+                    
                     <div id="scenarioStatus" class="text-xs text-gray-500 text-right w-full"></div>
                 </div>
 
@@ -299,11 +322,12 @@
         
         // GETRENNTE KOLLEKTIONEN
         const LOGISTICS_SCENARIOS_COLLECTION = 'scenarios'; // Für E-Com Controller Tool (LESEN)
-        const BUSINESS_CASES_COLLECTION = 'business_cases'; // Für dieses Tool (SCHREIBEN)
+        const BUSINESS_CASES_COLLECTION = 'business_cases'; // Für dieses Tool (LESEN/SCHREIBEN)
 
         let loadedScenarioData = null; 
         let importedProjects = []; 
-        const PLANNING_HORIZON = 5; // T+1 bis T+5 (REDUZIERT VON 7)
+        let projectInputValues = {}; // NEU: Speichert Projekt-Input-Anpassungen
+        const PLANNING_HORIZON = 5; // T+1 bis T+5 (REDUZIERT)
 
         // Hilfsfunktionen zur Formatierung
         const formatter = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -370,7 +394,8 @@
                         document.getElementById('authStatus').classList.add('text-green-600');
                         
                         isAuthReady = true; 
-                        loadScenariosListener(); // Starte den Listener, sobald Auth bereit ist
+                        loadScenariosListener(); // Starte Logistik-Laden
+                        loadBusinessCasesListener(); // NEU: Starte Business Case-Laden
                         calculateCase();
                     } else {
                         document.getElementById('authStatus').textContent = 'Anmeldung fehlgeschlagen';
@@ -587,7 +612,8 @@
                     for (let t = 1; t <= PLANNING_HORIZON; t++) {
                         // Lese den Wert aus dem spezifischen Input-Feld des Projekts
                         const inputId = `project_${i}_${effect.id}_T${t}`;
-                        const projectEffectValue = getInputValue(inputId);
+                        // NEU: Verwende den globalen Speicher 'projectInputValues'
+                        const projectEffectValue = projectInputValues[inputId] || 0;
                         
                         // Addiere den Effekt des Projekts zur Gesamtsumme dieses Jahres
                         aggregatedEffects[effect.id][t] += projectEffectValue;
@@ -741,7 +767,7 @@
         // =================================================================
         // RENDERING DER PROJEKT-INPUT-MATRIZEN (Layout korrigiert)
         // =================================================================
-        function renderProjectInputs(projects) {
+        function renderProjectInputs(projects, inputValues = {}) {
             const container = document.getElementById('projectEffectsContainer');
             if (!container) return;
             
@@ -777,12 +803,21 @@
                     for (let t = 1; t <= PLANNING_HORIZON; t++) {
                         // Eindeutige ID pro Projekt und Effekt: project_INDEX_EFFECTID_JAHR
                         const inputId = `project_${index}_${effect.id}_T${t}`;
-                        // Lese den Wert aus der Excel-Datei (z.B. Spalte "orderValueBoost_T1")
-                        const excelKey = `${effect.id}_T${t}`;
-                        const value = project[excelKey] || 0.0; 
+                        
+                        // NEU: Werte aus 'inputValues' (geladen) oder Excel oder 0.0
+                        let value = 0.0;
+                        if (inputValues[inputId] !== undefined) {
+                            value = inputValues[inputId]; // Nimm den gespeicherten Wert
+                        } else {
+                            const excelKey = `${effect.id}_T${t}`; // Lese den Wert aus der Excel-Datei
+                            value = project[excelKey] || 0.0; 
+                        }
+                        
+                        // Speichere den Initialwert im globalen Objekt
+                        projectInputValues[inputId] = value;
 
                         html += `<div class="grid-cell">
-                                    <input type="number" id="${inputId}" value="${value.toFixed(1)}" step="0.1" oninput="calculateCase()">
+                                    <input type="number" id="${inputId}" value="${value.toFixed(1)}" step="0.1" oninput="updateProjectInputValue('${inputId}', this.value)">
                                  </div>`;
                     }
                 });
@@ -790,6 +825,12 @@
             
             html += `</div>`; // Ende des Grids
             container.innerHTML = html; // Setze das gesamte HTML
+        }
+
+        // NEU: Funktion zum Speichern von Projekt-Input-Änderungen
+        function updateProjectInputValue(inputId, value) {
+            projectInputValues[inputId] = parseFloat(value) || 0;
+            calculateCase(); // Berechne die P&L neu, wenn ein Projektwert geändert wird
         }
         
         // =================================================================
@@ -922,10 +963,6 @@
         // DATEI-UPLOAD LOGIK
         // =================================================================
         function handleFileUpload(event) {
-            if (!isAuthReady) {
-                 document.getElementById('projectImportStatus').innerHTML = '<span class="text-red-600">Fehler: Bitte stellen Sie zuerst die Firebase-Verbindung her!</span>';
-                 return;
-            }
             const file = event.target.files[0];
             if (!file) return;
 
@@ -942,8 +979,9 @@
                     
                     document.getElementById('projectImportStatus').innerHTML = `<span class="text-green-600">Erfolgreich geladen: ${importedProjects.length} Projekte.</span>`;
                     
-                    // NEU: Projekteingabefelder rendern
-                    renderProjectInputs(importedProjects);
+                    // NEU: Projekteingabefelder rendern (leert projectInputValues)
+                    projectInputValues = {}; // Setze Anpassungen zurück
+                    renderProjectInputs(importedProjects, projectInputValues);
                     
                     calculateCase(); // Neuberechnung mit Projekt-Daten
                 } catch (error) {
@@ -970,11 +1008,12 @@
                 return;
             }
 
-            // Speichert T=0 Inputs UND die Projekt-Wirkungen
+            // KORREKTUR: Speichert ALLE relevanten Daten
             const scenarioData = {
                 scenarioName: scenarioName,
                 createdAt: new Date().toISOString(),
                 userId: userId,
+                // T=0 Basis-Inputs
                 baseInputs: {
                     pnl_1_order_value: getInputValue('pnl_1_order_value'),
                     pnl_kpi_return_rate: getInputValue('pnl_kpi_return_rate'),
@@ -984,18 +1023,19 @@
                     pnl_14_marketing: getInputValue('pnl_14_marketing'),
                     pnl_kpi_vat_rate: getInputValue('pnl_kpi_vat_rate'),
                 },
-                projectEffects: aggregateProjectEffects() // Speichert die Summe der Effekte
+                // Die Rohdaten der Excel-Datei
+                importedProjects: importedProjects,
+                // Alle Anpassungen, die in den Projekt-Matrizen vorgenommen wurden
+                projectInputValues: projectInputValues 
             };
 
             try {
                 // KORREKTUR: Speichert in 'business_cases' Kollektion
                 const docRef = await addDoc(collection(db, BUSINESS_CASES_COLLECTION), scenarioData);
                 document.getElementById('scenarioStatus').textContent = `Business Case "${scenarioName}" gespeichert.`;
-                // NEU: Erfolgs-Alert
                 alert(`Business Case "${scenarioName}" erfolgreich gespeichert!`);
             } catch (error) {
                 console.error("Fehler beim Speichern des Szenarios: ", error);
-                // NEU: Detaillierter Fehler-Alert
                 let errorMsg = 'Fehler beim Speichern!';
                 if (error.code === 'permission-denied') {
                     errorMsg = 'Fehler: Zugriff verweigert. Bitte Firestore-Regeln für "business_cases" (Schreibzugriff) prüfen!';
@@ -1021,7 +1061,6 @@
                     const data = doc.data();
                     const option = document.createElement('option');
                     option.value = doc.id;
-                    // Annahme: Das E-Com-Tool speichert 'scenarioName'
                     option.textContent = data.scenarioName || `Szenario ${doc.id.substring(0,5)}`;
                     if (doc.id === selectedValue) {
                         option.selected = true;
@@ -1038,6 +1077,36 @@
             });
         }
 
+        // NEU: Business Case-Liste laden
+        function loadBusinessCasesListener() {
+            if (!db) return;
+            const casesQuery = query(collection(db, BUSINESS_CASES_COLLECTION));
+            
+            onSnapshot(casesQuery, (snapshot) => {
+                const selector = document.getElementById('caseSelector');
+                const selectedValue = selector.value;
+                
+                selector.innerHTML = '<option value="">--- Business Case laden ---</option>';
+
+                snapshot.docs.forEach(doc => {
+                    const data = doc.data();
+                    const option = document.createElement('option');
+                    option.value = doc.id;
+                    option.textContent = data.scenarioName || `Case ${doc.id.substring(0,5)}`;
+                    if (doc.id === selectedValue) {
+                        option.selected = true;
+                    }
+                    selector.appendChild(option);
+                });
+                
+            }, (error) => {
+                console.error("Fehler beim Laden der Business Case-Liste: ", error);
+                if (error.code === 'permission-denied') {
+                     alert('Fehler: Zugriff verweigert. Bitte Firestore-Regeln für "business_cases" (Lesezugriff) prüfen!');
+                }
+            });
+        }
+
         // Ein spezifisches Logistik-Szenario laden
         async function loadScenarioData(docId) {
             if (!db || !docId) {
@@ -1050,28 +1119,69 @@
             document.getElementById('scenarioSpinner').classList.remove('hidden');
 
             try {
-                // KORREKTUR: Liest aus 'scenarios'
                 const docRef = doc(db, LOGISTICS_SCENARIOS_COLLECTION, docId);
                 const docSnap = await getDoc(docRef);
 
                 if (docSnap.exists()) {
                     loadedScenarioData = docSnap.data();
                     document.getElementById('scenarioStatus').textContent = `Logistik-Szenario "${loadedScenarioData.scenarioName}" geladen.`;
-                    
-                    // Wende die geladenen Logistik-Daten auf die T=0 Inputs an (falls gewünscht)
-                    // (Aktuell werden sie in calculateCase() für T+1 bis T+5 verwendet)
-                    
                     calculateCase(); // Neuberechnung mit den Daten des Szenarios
                 } else {
                     document.getElementById('scenarioStatus').textContent = 'Fehler: Szenario nicht gefunden.';
                     loadedScenarioData = null;
                 }
             } catch (error) {
-                 console.error("Fehler beim Laden des Dokuments: ", error);
+                 console.error("Fehler beim Laden des Logistik-Szenarios: ", error);
                  document.getElementById('scenarioStatus').textContent = 'Fehler beim Laden.';
                  loadedScenarioData = null;
             } finally {
                 document.getElementById('scenarioSpinner').classList.add('hidden');
+            }
+        }
+
+        // NEU: Einen spezifischen Business Case laden
+        async function loadBusinessCase(docId) {
+            const caseSpinner = document.getElementById('caseSpinner');
+            if (!db || !docId) {
+                return;
+            }
+            
+            caseSpinner.classList.remove('hidden');
+
+            try {
+                const docRef = doc(db, BUSINESS_CASES_COLLECTION, docId);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    
+                    // 1. Lade T=0 Basis-Inputs
+                    const inputs = data.baseInputs || {};
+                    Object.keys(inputs).forEach(key => {
+                        const el = document.getElementById(key);
+                        if (el) el.value = inputs[key];
+                    });
+                    
+                    // 2. Lade Projekt-Daten
+                    importedProjects = data.importedProjects || [];
+                    projectInputValues = data.projectInputValues || {};
+                    
+                    // 3. Rendere die Projekt-Inputs mit den geladenen Werten
+                    renderProjectInputs(importedProjects, projectInputValues);
+                    
+                    // 4. Setze den Namen
+                    document.getElementById('scenarioNameInput').value = data.scenarioName || '';
+                    document.getElementById('scenarioStatus').textContent = `Business Case "${data.scenarioName}" geladen.`;
+                    
+                    calculateCase(); // Neuberechnung mit den geladenen Daten
+                } else {
+                    document.getElementById('scenarioStatus').textContent = 'Fehler: Business Case nicht gefunden.';
+                }
+            } catch (error) {
+                 console.error("Fehler beim Laden des Business Case: ", error);
+                 document.getElementById('scenarioStatus').textContent = 'Fehler beim Laden des Case.';
+            } finally {
+                caseSpinner.classList.add('hidden');
             }
         }
 
@@ -1081,14 +1191,22 @@
         window.onload = function() {
             // Globale Funktionen verfügbar machen
             window.calculateCase = calculateCase;
-            window.handleFileUpload = (event) => handleFileUpload(event); // Event-Listener für Excel
+            window.handleFileUpload = (event) => handleFileUpload(event);
             window.loadScenarioData = loadScenarioData;
-            window.showTab = showTab; // NEU: Tab-Funktion global machen
+            window.loadBusinessCase = loadBusinessCase; // NEU
+            window.showTab = showTab;
+            window.updateProjectInputValue = updateProjectInputValue; // NEU
 
             // Event Listener für Excel-Upload manuell binden
             const excelFileInput = document.getElementById('excelFile');
             if (excelFileInput) {
                 excelFileInput.addEventListener('change', handleFileUpload);
+            }
+
+            // NEU: Event Listener für Business Case Lade-Dropdown
+            const caseSelector = document.getElementById('caseSelector');
+            if (caseSelector) {
+                caseSelector.addEventListener('change', (e) => loadBusinessCase(e.target.value));
             }
 
             initFirebase(); // Startet Firebase UND ruft calculateCase() auf
