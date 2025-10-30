@@ -110,6 +110,27 @@
         .kpi-input-grid .grid-sticky-col { background-color: #fefce8; } /* Gelber Hintergrund für KPI-Label */
         .kpi-input-grid .grid-header { background-color: #fef3c7; } /* Dunkleres Gelb für KPI-Header */
 
+        /* Tab-Stile */
+        .tab-button {
+            padding: 1rem 0.25rem;
+            border-bottom-width: 2px;
+            font-medium: 0.875rem;
+            white-space: nowrap;
+        }
+        .tab-button.active {
+            border-color: #4f46e5; /* indigo-600 */
+            color: #4f46e5;
+        }
+        .tab-button.inactive {
+            border-color: transparent;
+            color: #6b7280; /* gray-500 */
+        }
+        .tab-button.inactive:hover {
+            border-color: #d1d5db; /* gray-300 */
+            color: #374151; /* gray-700 */
+        }
+
+
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -148,101 +169,120 @@
             </div>
         </header>
 
-        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            
-            <!-- Linke Spalte: Eingaben & Steuerung -->
-            <div class="lg:col-span-1 space-y-8">
-
-                <!-- 0. PROJEKTLISTE IMPORTIEREN -->
-                <div class="p-4 bg-gray-100 rounded-lg shadow-inner border border-gray-300 space-y-4">
-                    <h2 class="text-xl font-bold text-indigo-700">0. Projektliste importieren</h2>
-                    <label for="excelFile" class="block text-sm font-medium text-gray-700">Wählen Sie Ihre Projektliste (.xlsx):</label>
-                    <input type="file" id="excelFile" accept=".xlsx, .xls" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200">
-                    
-                    <div id="projectImportStatus" class="text-sm text-gray-600 mt-2">
-                        Warte auf Datei-Upload (0 Projekte geladen).
-                    </div>
-                </div>
-
-                <!-- 1. P&L STARTWERTE & ZEITACHSE -->
-                <div class="p-4 bg-indigo-50 rounded-lg shadow-inner space-y-4">
-                    <h2 class="text-xl font-bold text-indigo-700">1. Basis & Zeitachse (T=0)</h2>
-                    <div class="input-group">
-                        <label for="startYear" class="block text-sm font-medium text-gray-700">Start-Jahr (T=0)</label>
-                        <input type="number" id="startYear" value="2024" min="2000" max="2100" step="1" oninput="calculateCase()" class="mt-1 w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
-                    </div>
-                    <div class="input-group">
-                        <label for="pnl_kpi_vat_rate" class="block text-sm font-medium text-gray-700">Mehrwertsteuersatz (MwSt. %)</label>
-                        <input type="number" id="pnl_kpi_vat_rate" value="19.0" min="0" max="100" step="0.1" oninput="calculateCase()" class="mt-1 w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
-                    </div>
-                    <!-- Aggregierte Eingaben für T=0 (werden im Code aufgesplittet) -->
-                    <h3 class="text-md font-semibold text-indigo-700 mt-4">Basis-Werte (Aggregiert T=0)</h3>
-                    <div class="input-group">
-                        <label for="pnl_1_order_value" class="block text-sm font-medium text-gray-700">Bestellwert (Brutto €)</label>
-                        <input type="number" id="pnl_1_order_value" value="1500000" min="0" step="10000" oninput="calculateCase()" class="mt-1 w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
-                    </div>
-                    <div class="input-group">
-                        <label for="pnl_kpi_return_rate" class="block text-sm font-medium text-gray-700">Retourenquote (%)</label>
-                        <input type="number" id="pnl_kpi_return_rate" value="25.0" min="0" max="100" step="0.1" oninput="calculateCase()" class="mt-1 w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
-                    </div>
-                    <div class="input-group">
-                        <label for="pnl_kpi_cogs_rate" class="block text-sm font-medium text-gray-700">Wareneinsatzquote (%)</label>
-                        <input type="number" id="pnl_kpi_cogs_rate" value="40.0" min="0" max="100" step="0.1" oninput="calculateCase()" class="mt-1 w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
-                    </div>
-                     <div class="input-group">
-                        <label for="pnl_4_other_rev" class="block text-sm font-medium text-gray-700">Sonstige Erlöse (Netto €)</label>
-                        <input type="number" id="pnl_4_other_rev" value="10000" min="0" step="100" oninput="calculateCase()" class="mt-1 w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
-                    </div>
-                    <div class="input-group">
-                        <label for="pnl_9_sales_cost" class="block text-sm font-medium text-gray-700">Direkte Kosten-Basis (€)</label>
-                        <input type="number" id="pnl_9_sales_cost" value="130000" min="0" step="1000" oninput="calculateCase()" class="mt-1 w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
-                    </div>
-                    <div class="input-group">
-                        <label for="pnl_14_marketing" class="block text-sm font-medium text-gray-700">Gemeinkosten-Basis (€)</label>
-                        <input type="number" id="pnl_14_marketing" value="200000" min="0" step="1000" oninput="calculateCase()" class="mt-1 w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
-                    </div>
-                </div>
-            </div>
-
-            <!-- Rechte Spalte: Detaillierte P&L Eingabe und Ergebnisse -->
-            <div class="lg:col-span-3 space-y-6">
-
-                <!-- 2. IMPORTIERTE PROJEKTE & WIRKLOGIK -->
-                <div class="p-6 bg-yellow-50 rounded-lg shadow-inner border border-yellow-300">
-                    <h2 class="text-2xl font-bold text-yellow-700 mb-4">2. Importierte Projekte & Wirklogik</h2>
-                    <p class="text-sm text-gray-600 mb-4">
-                        Projekte werden aus der Excel-Datei geladen. Tragen Sie hier die jährlichen Effekte für jedes Projekt ein.
-                        Die Gesamt-P&L aggregiert die Summe aller Projekteffekte.
-                    </p>
-                    
-                    <!-- Container für die dynamisch generierten Projekt-Input-Matrizen -->
-                    <div id="projectEffectsContainer" class="space-y-6">
-                        <p class="text-gray-500">Bitte laden Sie eine Excel-Projektliste, um die Eingabefelder zu sehen.</p>
-                    </div>
-                </div>
-
-                <!-- 3. P&L Ergebnis über 5 Jahre -->
-                <h2 class="text-2xl font-semibold text-gray-700 mt-8 border-b pb-2">3. P&L Ergebnis (T=0 bis T+5)</h2>
-                <div class="table-container">
-                    <!-- KORREKTUR: Header und Body werden jetzt von JS direkt hier eingefügt -->
-                    <div id="pnlTable" class="data-grid grid-cols-pnl">
-                        <!-- JS füllt diesen Container -->
-                    </div>
-                </div>
-
-                <!-- 4. KPI Übersichtstabelle -->
-                <h2 class="text-2xl font-semibold text-gray-700 mt-12 border-b pb-2">4. KPI-Entwicklung (T=0 bis T+5)</h2>
-                <div class="table-container mb-8">
-                    <!-- KORREKTUR: Header und Body werden jetzt von JS direkt hier eingefügt -->
-                    <div id="kpiTable" class="data-grid grid-cols-kpi">
-                        <!-- JS füllt diesen Container -->
-                    </div>
-                </div>
-                
-                <p class="text-sm text-gray-500 mt-4">Hinweis: Die Logistikkosten basieren in T+1 bis T+5 auf dem geladenen Szenario und den durch den Boost erhöhten Bestellwerten.</p>
-            </div>
-
+        <!-- NEU: Tab-Navigation -->
+        <div class="mb-6 border-b border-gray-200">
+            <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                <button id="tab-pnl" onclick="showTab('pnl')" class="tab-button active">P&L & KPIs</button>
+                <button id="tab-projects" onclick="showTab('projects')" class="tab-button inactive">Projekt-Steuerung</button>
+            </nav>
         </div>
+
+        <!-- NEU: Tab-Container -->
+        <div>
+            <!-- Tab 1: P&L & KPIs (Standardansicht) -->
+            <div id="pane-pnl">
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            
+                    <!-- Linke Spalte: Eingaben & Steuerung -->
+                    <div class="lg:col-span-1 space-y-8">
+                        <!-- 1. P&L STARTWERTE & ZEITACHSE -->
+                        <div class="p-4 bg-indigo-50 rounded-lg shadow-inner space-y-4">
+                            <h2 class="text-xl font-bold text-indigo-700">1. Basis & Zeitachse (T=0)</h2>
+                            <div class="input-group">
+                                <label for="startYear" class="block text-sm font-medium text-gray-700">Start-Jahr (T=0)</label>
+                                <input type="number" id="startYear" value="2024" min="2000" max="2100" step="1" oninput="calculateCase()" class="mt-1 w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
+                            </div>
+                            <div class="input-group">
+                                <label for="pnl_kpi_vat_rate" class="block text-sm font-medium text-gray-700">Mehrwertsteuersatz (MwSt. %)</label>
+                                <input type="number" id="pnl_kpi_vat_rate" value="19.0" min="0" max="100" step="0.1" oninput="calculateCase()" class="mt-1 w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
+                            </div>
+                            <!-- Aggregierte Eingaben für T=0 (werden im Code aufgesplittet) -->
+                            <h3 class="text-md font-semibold text-indigo-700 mt-4">Basis-Werte (Aggregiert T=0)</h3>
+                            <div class="input-group">
+                                <label for="pnl_1_order_value" class="block text-sm font-medium text-gray-700">Bestellwert (Brutto €)</label>
+                                <input type="number" id="pnl_1_order_value" value="1500000" min="0" step="10000" oninput="calculateCase()" class="mt-1 w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
+                            </div>
+                            <div class="input-group">
+                                <label for="pnl_kpi_return_rate" class="block text-sm font-medium text-gray-700">Retourenquote (%)</label>
+                                <input type="number" id="pnl_kpi_return_rate" value="25.0" min="0" max="100" step="0.1" oninput="calculateCase()" class="mt-1 w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
+                            </div>
+                            <div class="input-group">
+                                <label for="pnl_kpi_cogs_rate" class="block text-sm font-medium text-gray-700">Wareneinsatzquote (%)</label>
+                                <input type="number" id="pnl_kpi_cogs_rate" value="40.0" min="0" max="100" step="0.1" oninput="calculateCase()" class="mt-1 w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
+                            </div>
+                             <div class="input-group">
+                                <label for="pnl_4_other_rev" class="block text-sm font-medium text-gray-700">Sonstige Erlöse (Netto €)</label>
+                                <input type="number" id="pnl_4_other_rev" value="10000" min="0" step="100" oninput="calculateCase()" class="mt-1 w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
+                            </div>
+                            <div class="input-group">
+                                <label for="pnl_9_sales_cost" class="block text-sm font-medium text-gray-700">Direkte Kosten-Basis (€)</label>
+                                <input type="number" id="pnl_9_sales_cost" value="130000" min="0" step="1000" oninput="calculateCase()" class="mt-1 w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
+                            </div>
+                            <div class="input-group">
+                                <label for="pnl_14_marketing" class="block text-sm font-medium text-gray-700">Gemeinkosten-Basis (€)</label>
+                                <input type="number" id="pnl_14_marketing" value="200000" min="0" step="1000" oninput="calculateCase()" class="mt-1 w-full rounded-lg border-gray-300 shadow-sm p-2 border-2">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Rechte Spalte: Detaillierte P&L Eingabe und Ergebnisse -->
+                    <div class="lg:col-span-3 space-y-6">
+
+                        <!-- 3. P&L Ergebnis über 5 Jahre -->
+                        <h2 class="text-2xl font-semibold text-gray-700 mt-8 border-b pb-2">3. P&L Ergebnis (T=0 bis T+5)</h2>
+                        <div class="table-container">
+                            <!-- KORREKTUR: Header und Body werden jetzt von JS direkt hier eingefügt -->
+                            <div id="pnlTable" class="data-grid grid-cols-pnl">
+                                <!-- JS füllt diesen Container -->
+                            </div>
+                        </div>
+
+                        <!-- 4. KPI Übersichtstabelle -->
+                        <h2 class="text-2xl font-semibold text-gray-700 mt-12 border-b pb-2">4. KPI-Entwicklung (T=0 bis T+5)</h2>
+                        <div class="table-container mb-8">
+                            <!-- KORREKTUR: Header und Body werden jetzt von JS direkt hier eingefügt -->
+                            <div id="kpiTable" class="data-grid grid-cols-kpi">
+                                <!-- JS füllt diesen Container -->
+                            </div>
+                        </div>
+                        
+                        <p class="text-sm text-gray-500 mt-4">Hinweis: Die Logistikkosten basieren in T+1 bis T+5 auf dem geladenen Szenario und den durch den Boost erhöhten Bestellwerten.</p>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Tab 2: Projekt-Steuerung (Standard verborgen) -->
+            <div id="pane-projects" class="hidden">
+                <div class="max-w-6xl mx-auto space-y-8">
+                    <!-- 0. PROJEKTLISTE IMPORTIEREN (Hierher verschoben) -->
+                    <div class="p-6 bg-gray-100 rounded-lg shadow-inner border border-gray-300 space-y-4">
+                        <h2 class="text-xl font-bold text-indigo-700">0. Projektliste importieren</h2>
+                        <label for="excelFile" class="block text-sm font-medium text-gray-700">Wählen Sie Ihre Projektliste (.xlsx):</label>
+                        <input type="file" id="excelFile" accept=".xlsx, .xls" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200">
+                        
+                        <div id="projectImportStatus" class="text-sm text-gray-600 mt-2">
+                            Warte auf Datei-Upload (0 Projekte geladen).
+                        </div>
+                    </div>
+
+                    <!-- 2. IMPORTIERTE PROJEKTE & WIRKLOGIK (Hierher verschoben) -->
+                    <div class="p-6 bg-yellow-50 rounded-lg shadow-inner border border-yellow-300">
+                        <h2 class="text-2xl font-bold text-yellow-700 mb-4">2. Importierte Projekte & Wirklogik</h2>
+                        <p class="text-sm text-gray-600 mb-4">
+                            Projekte werden aus der Excel-Datei geladen. Tragen Sie hier die jährlichen Effekte für jedes Projekt ein.
+                            Die Gesamt-P&L aggregiert die Summe aller Projekteffekte.
+                        </p>
+                        
+                        <!-- Container für die dynamisch generierten Projekt-Input-Matrizen -->
+                        <div id="projectEffectsContainer" class="space-y-6">
+                            <p class="text-gray-500">Bitte laden Sie eine Excel-Projektliste, um die Eingabefelder zu sehen.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <script type="module">
@@ -281,6 +321,20 @@
             const element = document.getElementById(id);
             return parseFloat(element?.value) || 0;
         };
+
+        /**
+         * NEU: Tab-Wechsel-Logik
+         */
+        function showTab(tabName) {
+            document.getElementById('pane-pnl').classList.toggle('hidden', tabName !== 'pnl');
+            document.getElementById('pane-projects').classList.toggle('hidden', tabName === 'pnl');
+            
+            document.getElementById('tab-pnl').classList.toggle('active', tabName === 'pnl');
+            document.getElementById('tab-pnl').classList.toggle('inactive', tabName !== 'pnl');
+            
+            document.getElementById('tab-projects').classList.toggle('active', tabName === 'projects');
+            document.getElementById('tab-projects').classList.toggle('inactive', tabName !== 'projects');
+        }
         
         // =================================================================
         // FIREBASE INITIALISIERUNG & AUTH
@@ -343,6 +397,8 @@
             { id: 'pnl_1_order_value', label: 'Bestellwert (Brutto)', type: 'nominal' },
             { id: 'pnl_2_mwst', label: './. MwSt.', type: 'calculated', isCost: true, isMwst: true },
             { id: 'pnl_3_revenue_fakturiert', label: '= Umsatz fakturiert (Netto)', type: 'calculated', isBold: true },
+            // NEU: Retourenquote in P&L
+            { id: 'pnl_kpi_return_rate', label: 'Retourenquote (KPI %)', type: 'kpi' }, 
             { id: 'pnl_4_other_rev', label: '+ Sonstige Erlöse', type: 'nominal' },
             { id: 'pnl_5_cogs', label: './. Wareneinsatz', type: 'calculated', isCost: true },
             { id: 'DB1', label: '= DB 1', type: 'subtotal', color: 'text-green-600' },
@@ -457,6 +513,9 @@
             PNL.pnl_2_mwst = PNL.pnl_1_order_value - netOrderValue; // MwSt.
             PNL.pnl_3_revenue_fakturiert = netOrderValue * (1 - returnRate / 100); // Umsatz fakturiert (Netto)
             
+            // NEU: Setze die KPI in der PNL
+            PNL.pnl_kpi_return_rate = returnRate;
+
             PNL.pnl_4_other_rev = inputs.pnl_4_other_rev; // Sonstige Erlöse (Nominaler Input)
             
             PNL.pnl_5_cogs = PNL.pnl_3_revenue_fakturiert * (cogsRate / 100); // Wareneinsatz
@@ -702,7 +761,7 @@
 
             // Iteriere über alle Projekte UND dann über alle Effekte
             projects.forEach((project, index) => {
-                const projectName = project.Projektname || `Projekt ${index + 1}`; // KORREKT: "Projektname"
+                const projectName = project.Projektname || `Projekt ${index + 1}`; // KORREKTUR RÜCKGÄNGIG: "Projektname"
                 
                 KPI_INPUT_EFFECTS.forEach((effect, effectIndex) => {
                     
@@ -770,14 +829,21 @@
                     let percentDisplay;
                     let valueClass = '';
 
-                    valueDisplay = formatter.format(value);
-                    
-                    if (item.id === 'pnl_1_order_value' || item.id === 'pnl_2_mwst') {
-                         percentDisplay = 'N/A';
-                    } else if (item.id === 'pnl_3_revenue_fakturiert') {
-                         percentDisplay = percentFormatter.format(1); // Umsatz ist immer 100% seiner selbst
+                    // NEUE LOGIK FÜR KPI-ZEILE
+                    if (item.type === 'kpi') {
+                        valueDisplay = `${value.toFixed(1)} %`;
+                        percentDisplay = 'N/A';
+                        valueClass = 'font-semibold bg-yellow-50';
                     } else {
-                        percentDisplay = percentFormatter.format(value / baseRevenue);
+                        valueDisplay = formatter.format(value);
+                        
+                        if (item.id === 'pnl_1_order_value' || item.id === 'pnl_2_mwst') {
+                             percentDisplay = 'N/A';
+                        } else if (item.id === 'pnl_3_revenue_fakturiert') {
+                             percentDisplay = percentFormatter.format(1); // Umsatz ist immer 100% seiner selbst
+                        } else {
+                            percentDisplay = percentFormatter.format(value / baseRevenue);
+                        }
                     }
                     
                     if (item.type === 'final' || item.type === 'subtotal') {
@@ -925,9 +991,17 @@
                 // KORREKTUR: Speichert in 'business_cases' Kollektion
                 const docRef = await addDoc(collection(db, BUSINESS_CASES_COLLECTION), scenarioData);
                 document.getElementById('scenarioStatus').textContent = `Business Case "${scenarioName}" gespeichert.`;
+                // NEU: Erfolgs-Alert
+                alert(`Business Case "${scenarioName}" erfolgreich gespeichert!`);
             } catch (error) {
                 console.error("Fehler beim Speichern des Szenarios: ", error);
-                document.getElementById('scenarioStatus').textContent = 'Fehler beim Speichern!';
+                // NEU: Detaillierter Fehler-Alert
+                let errorMsg = 'Fehler beim Speichern!';
+                if (error.code === 'permission-denied') {
+                    errorMsg = 'Fehler: Zugriff verweigert. Bitte Firestore-Regeln für "business_cases" (Schreibzugriff) prüfen!';
+                }
+                document.getElementById('scenarioStatus').textContent = errorMsg;
+                alert(errorMsg);
             }
         });
 
@@ -1009,6 +1083,7 @@
             window.calculateCase = calculateCase;
             window.handleFileUpload = (event) => handleFileUpload(event); // Event-Listener für Excel
             window.loadScenarioData = loadScenarioData;
+            window.showTab = showTab; // NEU: Tab-Funktion global machen
 
             // Event Listener für Excel-Upload manuell binden
             const excelFileInput = document.getElementById('excelFile');
