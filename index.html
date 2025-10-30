@@ -301,6 +301,14 @@
             background-color: #a78bfa; /* purple-400 */
             cursor: not-allowed;
         }
+        /* KI Text Area */
+        .ai-textarea {
+             width: 100%;
+             border-radius: 0.375rem;
+             border: 1px solid #d1d5db;
+             padding: 0.5rem 0.75rem;
+             font-size: 0.875rem;
+        }
 
     </style>
 </head>
@@ -1270,6 +1278,19 @@
                 let projectHtml = `
                     <div class="p-4 bg-white rounded-lg shadow-md border border-gray-200">
                         <h3 class="text-xl font-bold text-indigo-600 mb-3">${projectName}</h3>
+                        
+                        <!-- NEU: KI-Eingabefeld -->
+                        <div class="mb-4">
+                            <label for="ai-input-${index}" class="block text-sm font-medium text-gray-700 mb-1">Qualitative Effekt-Steuerung (KI-gestützt)</label>
+                            <div class="flex items-center space-x-2">
+                                <textarea id="ai-input-${index}" class="ai-textarea flex-grow" rows="2" placeholder="z.B. 5% Effekt auf den Bestellwert in den ersten drei jahren"></textarea>
+                                <button id="ai-button-${index}" onclick="handleAiParse(${index}, 'ai-input-${index}')" class="ai-parse-button">
+                                    KI Parse
+                                </button>
+                                <div id="ai-spinner-${index}" class="hidden spinner"></div>
+                            </div>
+                        </div>
+
                         <div class="table-container kpi-input-grid grid-cols-kpi-input-projects">
                 `;
 
@@ -1328,8 +1349,12 @@
             // Beim Ändern eines Projekt-Inputs, speichere den Rohwert und berechne neu
             const element = document.getElementById(inputId);
             if (element) {
-                element.dataset.rawValue = parseFloat(element.value.replace(/[^0-9,-]+/g, '').replace(',', '.')) || 0;
+                // Ersetze Komma durch Punkt für JS-Verarbeitung
+                const cleanValue = element.value.replace(/[^0-9,-]+/g, '').replace(',', '.');
+                element.dataset.rawValue = parseFloat(cleanValue) || 0;
             }
+            // Speichere den Rohwert im globalen Objekt
+            projectInputValues[inputId] = parseFloat(element.dataset.rawValue) || 0;
             calculateCase(); 
         }
         
@@ -1810,6 +1835,150 @@
                 }, 3000);
             }
         }
+        
+        // =================================================================
+        // NEU: GEMINI KI-FUNKTIONEN
+        // =================================================================
+
+        // Hilfsfunktion für exponentielles Backoff bei API-Aufrufen
+        async function exponentialBackoff(apiCall, maxRetries = 5) {
+            let delay = 1000; // 1 Sekunde
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await apiCall();
+                    if (response.ok) {
+                        return response; // Erfolg
+                    }
+                    // Behandle 429 (Too Many Requests) und 5xx (Server Errors)
+                    if (response.status === 429 || response.status >= 500) {
+                        console.warn(`API-Fehler (Status ${response.status}), versuche erneut in ${delay}ms...`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2;
+                    } else {
+                        // Andere Client-Fehler (z.B. 400 Bad Request) nicht wiederholen
+                        return response; 
+                    }
+                } catch (error) {
+                    // Netzwerkfehler
+                    console.warn(`Netzwerkfehler, versuche erneut in ${delay}ms...`, error);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2;
+                }
+            }
+            throw new Error(`API-Aufruf nach ${maxRetries} Versuchen fehlgeschlagen.`);
+        }
+
+        /**
+         * Ruft die Gemini API auf, um den qualitativen Text zu parsen.
+         */
+        async function callGeminiApi(userQuery) {
+            const apiKey = ""; // Wird von der Umgebung bereitgestellt
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+            // System-Instruktion definiert die Rolle und das JSON-Ausgabeformat
+            const systemPrompt = `Sie sind ein Controlling-Assistent. Ihre Aufgabe ist es, einen Text-Input in ein strukturiertes JSON-Objekt zu übersetzen. Das JSON-Objekt muss 8 Felder haben, die den 8 KPI-Effekten entsprechen. Jedes Feld muss ein Array mit exakt 5 Zahlen (für T+1 bis T+5) sein. Die 8 Effekt-IDs sind: 'orderValueBoost', 'returnRateReduction', 'avgVKBoost', 'ipoBoost', 'freightCostReduction', 'personnelCostReduction', 'marketingCostReduction', 'rechargeCostReduction'. 'p.p.' bedeutet Prozentpunkte. 'c.p.' bedeutet ceteris paribus (prozentuale Änderung). Fülle alle Arrays mit 0, wenn der Text keine Informationen dazu enthält.`;
+
+            // Definition des erwarteten JSON-Schemas
+            const responseSchema = {
+                type: "OBJECT",
+                properties: {
+                    "orderValueBoost": { type: "ARRAY", items: { type: "NUMBER" } },
+                    "returnRateReduction": { type: "ARRAY", items: { type: "NUMBER" } },
+                    "avgVKBoost": { type: "ARRAY", items: { type: "NUMBER" } },
+                    "ipoBoost": { type: "ARRAY", items: { type: "NUMBER" } },
+                    "freightCostReduction": { type: "ARRAY", items: { type: "NUMBER" } },
+                    "personnelCostReduction": { type: "ARRAY", items: { type: "NUMBER" } },
+                    "marketingCostReduction": { type: "ARRAY", items: { type: "NUMBER" } },
+                    "rechargeCostReduction": { type: "ARRAY", items: { type: "NUMBER" } }
+                }
+            };
+
+            const payload = {
+                contents: [{ parts: [{ text: userQuery }] }],
+                systemInstruction: {
+                    parts: [{ text: systemPrompt }]
+                },
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: responseSchema
+                }
+            };
+
+            const apiCall = () => fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            // Verwende exponentielles Backoff für den API-Aufruf
+            const response = await exponentialBackoff(apiCall);
+
+            if (!response.ok) {
+                console.error("Fehler bei der Gemini-API-Anfrage:", response.status, await response.text());
+                throw new Error(`API-Fehler: ${response.status}`);
+            }
+
+            const result = await response.json();
+            const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+            
+            if (!text) {
+                 throw new Error("Keine gültige Antwort von der KI erhalten.");
+            }
+            
+            return JSON.parse(text);
+        }
+
+        /**
+         * Verarbeitet den Klick auf den "KI Parse"-Button
+         */
+        async function handleAiParse(projectIndex, textareaId) {
+            const textarea = document.getElementById(textareaId);
+            const button = document.getElementById(`ai-button-${projectIndex}`);
+            const spinner = document.getElementById(`ai-spinner-${projectIndex}`);
+
+            if (!textarea || !button || !spinner) return;
+
+            const userQuery = textarea.value;
+            if (!userQuery) {
+                alert("Bitte geben Sie einen qualitativen Effekt ein.");
+                return;
+            }
+
+            button.disabled = true;
+            spinner.classList.remove('hidden');
+
+            try {
+                // Rufe die KI auf
+                const parsedData = await callGeminiApi(userQuery);
+
+                // Verarbeite die JSON-Antwort
+                KPI_INPUT_EFFECTS.forEach(effect => {
+                    const dataArray = parsedData[effect.id];
+                    if (dataArray && Array.isArray(dataArray) && dataArray.length === PLANNING_HORIZON) {
+                        for (let t = 1; t <= PLANNING_HORIZON; t++) {
+                            const inputId = `project_${projectIndex}_${effect.id}_T${t}`;
+                            const value = dataArray[t - 1]; // Array-Index 0 ist T+1
+                            
+                            // Aktualisiere den globalen Speicher
+                            projectInputValues[inputId] = value;
+                            
+                            // Aktualisiere das Input-Feld in der Tabelle
+                            setInputValue(inputId, value);
+                        }
+                    }
+                });
+
+                // Berechne die P&L neu
+                calculateCase();
+                
+            } catch (error) {
+                console.error("Fehler beim KI-Parsing: ", error);
+                alert(`Fehler beim Verarbeiten der KI-Anfrage: ${error.message}`);
+            } finally {
+                button.disabled = false;
+                spinner.classList.add('hidden');
+            }
+        }
 
 
         // =================================================================
@@ -1823,9 +1992,9 @@
             window.showTab = showTab;
             window.updateProjectInputValue = updateProjectInputValue; // NEU
             window.toggleManualLogistics = toggleManualLogistics; // NEU
-            // NEU: Formatierungsfunktionen global machen
-            window.formatInput = formatInput;
-            window.unformatInput = unformatInput;
+            window.formatInput = formatInput; // NEU
+            window.unformatInput = unformatInput; // NEU
+            window.handleAiParse = handleAiParse; // NEU (KI-Funktion)
 
             // Event Listener für Excel-Uploads
             setupExcelUpload('excelFileProjects', 'projectImportStatus', handleProjectUploadCallback);
