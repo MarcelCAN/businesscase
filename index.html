@@ -1875,33 +1875,33 @@
             const apiKey = ""; // Wird von der Umgebung bereitgestellt
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
 
-            // System-Instruktion definiert die Rolle und das JSON-Ausgabeformat
-            const systemPrompt = `Sie sind ein Controlling-Assistent. Ihre Aufgabe ist es, einen Text-Input in ein strukturiertes JSON-Objekt zu übersetzen. Das JSON-Objekt muss 8 Felder haben, die den 8 KPI-Effekten entsprechen. Jedes Feld muss ein Array mit exakt 5 Zahlen (für T+1 bis T+5) sein. Die 8 Effekt-IDs sind: 'orderValueBoost', 'returnRateReduction', 'avgVKBoost', 'ipoBoost', 'freightCostReduction', 'personnelCostReduction', 'marketingCostReduction', 'rechargeCostReduction'. 'p.p.' bedeutet Prozentpunkte. 'c.p.' bedeutet ceteris paribus (prozentuale Änderung). Fülle alle Arrays mit 0, wenn der Text keine Informationen dazu enthält.`;
+            // KORREKTUR: System-Prompt angepasst, um JSON-Schema-Fehler (403) zu umgehen.
+            // Wir fordern nun reinen Text an, der *nur* das JSON enthält.
+            const systemPrompt = `Sie sind ein Controlling-Assistent. Ihre Aufgabe ist es, einen Text-Input in ein strukturiertes JSON-Objekt zu übersetzen. Antworten Sie AUSSCHLIESSLICH mit dem JSON-Objekt, ohne umschließende Markdown-Tags (\`\`\`json ... \`\`\`).
+Das JSON-Objekt muss 8 Felder haben, die den 8 KPI-Effekten entsprechen. Jedes Feld muss ein Array mit exakt 5 Zahlen (für T+1 bis T+5) sein.
+Die 8 Effekt-IDs sind: 'orderValueBoost', 'returnRateReduction', 'avgVKBoost', 'ipoBoost', 'freightCostReduction', 'personnelCostReduction', 'marketingCostReduction', 'rechargeCostReduction'. 
+'p.p.' bedeutet Prozentpunkte. 'c.p.' bedeutet ceteris paribus (prozentuale Änderung). 
+Fülle alle Arrays mit 0, wenn der Text keine Informationen dazu enthält.
 
-            // Definition des erwarteten JSON-Schemas
-            const responseSchema = {
-                type: "OBJECT",
-                properties: {
-                    "orderValueBoost": { type: "ARRAY", items: { type: "NUMBER" } },
-                    "returnRateReduction": { type: "ARRAY", items: { type: "NUMBER" } },
-                    "avgVKBoost": { type: "ARRAY", items: { type: "NUMBER" } },
-                    "ipoBoost": { type: "ARRAY", items: { type: "NUMBER" } },
-                    "freightCostReduction": { type: "ARRAY", items: { type: "NUMBER" } },
-                    "personnelCostReduction": { type: "ARRAY", items: { type: "NUMBER" } },
-                    "marketingCostReduction": { type: "ARRAY", items: { type: "NUMBER" } },
-                    "rechargeCostReduction": { type: "ARRAY", items: { type: "NUMBER" } }
-                }
-            };
+Beispiel-Input: "5% Effekt auf den Bestellwert in den ersten drei jahren, senkt Retourenquote um 1.5 p.p. in Jahr 2."
+Beispiel-Output:
+{
+  "orderValueBoost": [5, 5, 5, 0, 0],
+  "returnRateReduction": [0, 1.5, 0, 0, 0],
+  "avgVKBoost": [0, 0, 0, 0, 0],
+  "ipoBoost": [0, 0, 0, 0, 0],
+  "freightCostReduction": [0, 0, 0, 0, 0],
+  "personnelCostReduction": [0, 0, 0, 0, 0],
+  "marketingCostReduction": [0, 0, 0, 0, 0],
+  "rechargeCostReduction": [0, 0, 0, 0, 0]
+}`;
 
             const payload = {
                 contents: [{ parts: [{ text: userQuery }] }],
                 systemInstruction: {
                     parts: [{ text: systemPrompt }]
-                },
-                generationConfig: {
-                    responseMimeType: "application/json",
-                    responseSchema: responseSchema
                 }
+                // KORREKTUR: generationConfig entfernt, um 403-Fehler zu umgehen
             };
 
             const apiCall = () => fetch(apiUrl, {
@@ -1919,12 +1919,15 @@
             }
 
             const result = await response.json();
-            const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+            let text = result.candidates?.[0]?.content?.parts?.[0]?.text;
             
             if (!text) {
                  throw new Error("Keine gültige Antwort von der KI erhalten.");
             }
             
+            // KORREKTUR: Bereinige umschließende Markdown-Tags, falls die KI sie trotzdem sendet
+            text = text.replace(/^```json\s*|```$/g, '').trim();
+
             return JSON.parse(text);
         }
 
