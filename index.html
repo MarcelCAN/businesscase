@@ -283,33 +283,6 @@
             font-weight: 700;
             color: #0c4a6e;
         }
-        
-        /* NEU: KI-Parse Button */
-        .ai-parse-button {
-            background-color: #7c3aed; /* purple-600 */
-            color: white;
-            font-weight: 700;
-            padding: 0.5rem 1rem;
-            border-radius: 0.375rem;
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-            transition: background-color 0.2s;
-        }
-        .ai-parse-button:hover {
-            background-color: #6d28d9; /* purple-700 */
-        }
-        .ai-parse-button:disabled {
-            background-color: #a78bfa; /* purple-400 */
-            cursor: not-allowed;
-        }
-        /* KI Text Area */
-        .ai-textarea {
-             width: 100%;
-             border-radius: 0.375rem;
-             border: 1px solid #d1d5db;
-             padding: 0.5rem 0.75rem;
-             font-size: 0.875rem;
-        }
-
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -1786,149 +1759,8 @@
             // Diese Funktion ist jetzt leer
         }
         
-        // =================================================================
-        // NEU: GEMINI KI-FUNKTIONEN (WIEDER EINGEFÜGT)
-        // =================================================================
-
-        // Hilfsfunktion für exponentielles Backoff bei API-Aufrufen
-        async function exponentialBackoff(apiCall, maxRetries = 5) {
-            let delay = 1000; // 1 Sekunde
-            for (let i = 0; i < maxRetries; i++) {
-                try {
-                    const response = await apiCall();
-                    if (response.ok) {
-                        return response; // Erfolg
-                    }
-                    if (response.status === 429 || response.status >= 500) {
-                        console.warn(`API-Fehler (Status ${response.status}), versuche erneut in ${delay}ms...`);
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                        delay *= 2;
-                    } else {
-                        return response; 
-                    }
-                } catch (error) {
-                    console.warn(`Netzwerkfehler, versuche erneut in ${delay}ms...`, error);
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                    delay *= 2;
-                }
-            }
-            throw new Error(`API-Aufruf nach ${maxRetries} Versuchen fehlgeschlagen.`);
-        }
-
-        /**
-         * Ruft die Gemini API auf, um den qualitativen Text zu parsen.
-         */
-        async function callGeminiApi(userQuery) {
-            const apiKey = ""; // Wird von der Umgebung bereitgestellt
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-
-            // KORREKTUR: System-Prompt angepasst, um JSON-Schema-Fehler (403) zu umgehen.
-            // Wir fordern nun reinen Text an, der *nur* das JSON enthält.
-            const systemPrompt = `Sie sind ein Controlling-Assistent. Ihre Aufgabe ist es, einen Text-Input in ein strukturiertes JSON-Objekt zu übersetzen. Antworten Sie AUSSCHLIESSLICH mit dem JSON-Objekt, ohne umschließende Markdown-Tags (\`\`\`json ... \`\`\`).
-Das JSON-Objekt muss 8 Felder haben, die den 8 KPI-Effekten entsprechen. Jedes Feld muss ein Array mit exakt 5 Zahlen (für T+1 bis T+5) sein.
-Die 8 Effekt-IDs sind: 'orderValueBoost', 'returnRateReduction', 'avgVKBoost', 'ipoBoost', 'freightCostReduction', 'personnelCostReduction', 'marketingCostReduction', 'rechargeCostReduction'. 
-'p.p.' bedeutet Prozentpunkte. 'c.p.' bedeutet ceteris paribus (prozentuale Änderung). 
-Fülle alle Arrays mit 0, wenn der Text keine Informationen dazu enthält.
-
-Beispiel-Input: "5% Effekt auf den Bestellwert in den ersten drei jahren, senkt Retourenquote um 1.5 p.p. in Jahr 2."
-Beispiel-Output:
-{
-  "orderValueBoost": [5, 5, 5, 0, 0],
-  "returnRateReduction": [0, 1.5, 0, 0, 0],
-  "avgVKBoost": [0, 0, 0, 0, 0],
-  "ipoBoost": [0, 0, 0, 0, 0],
-  "freightCostReduction": [0, 0, 0, 0, 0],
-  "personnelCostReduction": [0, 0, 0, 0, 0],
-  "marketingCostReduction": [0, 0, 0, 0, 0],
-  "rechargeCostReduction": [0, 0, 0, 0, 0]
-}`;
-
-            const payload = {
-                contents: [{ parts: [{ text: userQuery }] }],
-                systemInstruction: {
-                    parts: [{ text: systemPrompt }]
-                }
-                // KORREKTUR: generationConfig entfernt, um 403-Fehler zu umgehen
-            };
-
-            const apiCall = () => fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            // Verwende exponentielles Backoff für den API-Aufruf
-            const response = await exponentialBackoff(apiCall);
-
-            if (!response.ok) {
-                console.error("Fehler bei der Gemini-API-Anfrage:", response.status, await response.text());
-                throw new Error(`API-Fehler: ${response.status}`);
-            }
-
-            const result = await response.json();
-            let text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-            
-            if (!text) {
-                 throw new Error("Keine gültige Antwort von der KI erhalten.");
-            }
-            
-            // KORREKTUR: Bereinige umschließende Markdown-Tags, falls die KI sie trotzdem sendet
-            text = text.replace(/^```json\s*|```$/g, '').trim();
-
-            return JSON.parse(text);
-        }
-
-        /**
-         * Verarbeitet den Klick auf den "KI Parse"-Button
-         */
-        async function handleAiParse(projectIndex, textareaId) {
-            const textarea = document.getElementById(textareaId);
-            const button = document.getElementById(`ai-button-${projectIndex}`);
-            const spinner = document.getElementById(`ai-spinner-${projectIndex}`);
-
-            if (!textarea || !button || !spinner) return;
-
-            const userQuery = textarea.value;
-            if (!userQuery) {
-                alert("Bitte geben Sie einen qualitativen Effekt ein.");
-                return;
-            }
-
-            button.disabled = true;
-            spinner.classList.remove('hidden');
-
-            try {
-                // Rufe die KI auf
-                const parsedData = await callGeminiApi(userQuery);
-
-                // Verarbeite die JSON-Antwort
-                KPI_INPUT_EFFECTS.forEach(effect => {
-                    const dataArray = parsedData[effect.id];
-                    if (dataArray && Array.isArray(dataArray) && dataArray.length === PLANNING_HORIZON) {
-                        for (let t = 1; t <= PLANNING_HORIZON; t++) {
-                            const inputId = `project_${projectIndex}_${effect.id}_T${t}`;
-                            const value = dataArray[t - 1]; // Array-Index 0 ist T+1
-                            
-                            // Aktualisiere den globalen Speicher
-                            projectInputValues[inputId] = value;
-                            
-                            // Aktualisiere das Input-Feld in der Tabelle
-                            setInputValue(inputId, value);
-                        }
-                    }
-                });
-
-                // Berechne die P&L neu
-                calculateCase();
-                
-            } catch (error) {
-                console.error("Fehler beim KI-Parsing: ", error);
-                alert(`Fehler beim Verarbeiten der KI-Anfrage: ${error.message}`);
-            } finally {
-                button.disabled = false;
-                spinner.classList.add('hidden');
-            }
-        }
+        // KORREKTUR: KI-Funktionen ENTFERNT
+        // ... (callGeminiApi, handleAiParse, exponentialBackoff sind entfernt) ...
 
 
         // =================================================================
@@ -1937,14 +1769,14 @@ Beispiel-Output:
         window.onload = function() {
             // Globale Funktionen verfügbar machen
             window.calculateCase = calculateCase;
-            window.loadScenarioData = loadScenarioData; // KORREKTUR: Wieder hinzugefügt
+            // KORREKTUR: window.loadScenarioData = loadScenarioData; (entfernt)
             window.loadBusinessCase = loadBusinessCase; 
             window.showTab = showTab;
             window.updateProjectInputValue = updateProjectInputValue; 
             window.toggleManualLogistics = toggleManualLogistics; 
             window.formatInput = formatInput; 
             window.unformatInput = unformatInput; 
-            window.handleAiParse = handleAiParse; // NEU (KI-Funktion)
+            // KORREKTUR: window.handleAiParse = handleAiParse; (entfernt)
 
             // Event Listener für Excel-Uploads
             setupExcelUpload('excelFileProjects', 'projectImportStatus', handleProjectUploadCallback);
@@ -1956,7 +1788,7 @@ Beispiel-Output:
             
             // NEU: Event Listener für Delete-Buttons
             document.getElementById('deleteCaseBtn')?.addEventListener('click', deleteBusinessCase);
-            document.getElementById('deleteLogisticsBtn')?.addEventListener('click', deleteLogisticsScenario); // KORREKTUR: Wieder hinzugefügt
+            // KORREKTUR: document.getElementById('deleteLogisticsBtn')?.addEventListener('click', deleteLogisticsScenario); (entfernt)
 
             initFirebase(); // Startet Firebase UND ruft calculateCase() auf
             toggleManualLogistics(); // Setzt den initialen Zustand des Toggles
