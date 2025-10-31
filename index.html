@@ -283,8 +283,6 @@
             font-weight: 700;
             color: #0c4a6e;
         }
-        
-        /* KI-Parse Button (ENTFERNT) */
 
     </style>
 </head>
@@ -1346,7 +1344,9 @@
             // KORREKTUR: Speichere den Rohwert im globalen Objekt
             projectInputValues[inputId] = parseFloat(element.dataset.rawValue) || 0;
             
-            // NICHT calculateCase() aufrufen, das macht onblur/formatInput
+            // KORREKTUR: Rufe calculateCase() auf, wenn ein Input-Feld (onblur) über formatInput() aktualisiert wird.
+            // (formatInput ruft calculateCase auf, aber updateProjectInputValue wird auch von oninput aufgerufen - 
+            // stellen wir sicher, dass es hier nicht doppelt aufgerufen wird, sondern nur beim Verlassen des Feldes)
         }
         
         // =================================================================
@@ -1723,6 +1723,9 @@
                     // 5. Rendere die Projekt-Inputs mit den geladenen Werten
                     renderProjectInputs(importedProjects, projectInputValues);
                     
+                    // KORREKTUR: Fülle den Stream-Filter, NACHDEM die Projekte geladen wurden
+                    populateStreamFilter(importedProjects);
+                    
                     // 6. Setze den Namen
                     document.getElementById('scenarioNameInput').value = data.scenarioName || '';
                     document.getElementById('scenarioStatus').textContent = `Business Case "${data.scenarioName}" geladen.`;
@@ -1796,6 +1799,7 @@
             window.formatInput = formatInput; 
             window.unformatInput = unformatInput; 
             // KORREKTUR: window.handleAiParse = handleAiParse; (entfernt)
+            window.handleAiParse = () => { alert("KI-Funktion ist derzeit deaktiviert."); }; // Sicherer Platzhalter
 
             // Event Listener für Excel-Uploads
             setupExcelUpload('excelFileProjects', 'projectImportStatus', handleProjectUploadCallback);
